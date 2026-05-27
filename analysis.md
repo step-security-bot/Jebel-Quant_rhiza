@@ -347,36 +347,36 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ### Recommendations (Priority Order)
 
-| Priority | Recommendation | Effort |
-|---|---|---|
-| High | Add end-to-end test: provision a minimal downstream repo, run `rhiza sync`, verify output | Medium |
-| High | Add `shellcheck` to pre-commit hooks for `.rhiza/utils/` shell scripts | Low |
-| Medium | Add bundle compatibility matrix test confirming all 46 bundle×platform combos produce valid output | High |
-| Medium | Add visual bundle dependency diagram to documentation | Low |
-| Medium | Add `make explain-bundles` interactive help target for onboarding | Low |
-| Low | Configure `ty` (or `mypy`) for Python 3.11/3.12 CI matrix jobs | Low |
-| Low | Review and prune stale Bandit suppressions in CI | Low |
-| Low | Add Renovate config for GitLab CI ecosystem dependencies | Low |
+| Priority | Recommendation | Effort | Status |
+|---|---|---|---|
+| High | Add end-to-end test: provision a minimal downstream repo, run `rhiza sync`, verify output | Medium | ⏳ Pending |
+| High | Add `shellcheck` to pre-commit hooks for `.rhiza/utils/` shell scripts | Low | ✅ `4c1b4dc` |
+| Medium | Add bundle compatibility matrix test confirming all 46 bundle×platform combos produce valid output | High | Not started |
+| Medium | Add visual bundle dependency diagram to documentation | Low | ✅ `b4ce717` |
+| Medium | Add `make explain-bundles` interactive help target for onboarding | Low | ✅ `c51e55f` |
+| Low | Configure `ty` (or `mypy`) for Python 3.11/3.12 CI matrix jobs | Low | ✅ `9a08e87` |
+| Low | Review and prune stale Bandit suppressions in CI | Low | Not started |
+| Low | Add Renovate config for GitLab CI ecosystem dependencies | Low | ✅ `a3855cf` |
 
 ---
 
 ## Final Scores
 
-| Category | Score |
-|---|---|
-| Architecture & Design | 9 / 10 |
-| Code Quality & Standards | 8 / 10 |
-| Testing & Coverage | 8 / 10 |
-| Documentation | 9 / 10 |
-| CI/CD & DevOps | 9 / 10 |
-| Security | 9 / 10 |
-| Developer Experience | 8 / 10 |
-| Dependency Management | 9 / 10 |
-| Maintainability & Extensibility | 7 / 10 |
-| Performance | 6 / 10 |
-| Configuration & Tooling | 9 / 10 |
-| **Overall** | **8.6 / 10** |
+| Category | Score | Updated |
+|---|---|---|
+| Architecture & Design | 9 / 10 | — |
+| Code Quality & Standards | ~~8~~ **9 / 10** | `4c1b4dc` shellcheck added |
+| Testing & Coverage | 8 / 10 | ⏳ e2e sync test pending |
+| Documentation | 9 / 10 | — |
+| CI/CD & DevOps | 9 / 10 | — |
+| Security | 9 / 10 | — |
+| Developer Experience | ~~8~~ **9 / 10** | `b4ce717` + `c51e55f` |
+| Dependency Management | 9 / 10 | `a3855cf` GitLab CI gap closed |
+| Maintainability & Extensibility | ~~7~~ **8 / 10** | `333bada` GNU Make documented |
+| Performance | 6 / 10 | — |
+| Configuration & Tooling | 9 / 10 | `9a08e87` full matrix typecheck |
+| **Overall** | **~~8.6~~ 8.8 / 10** | 3 categories raised; 1 remaining |
 
 ---
 
-*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Findings are based on static analysis of repository structure, configuration files, workflow definitions, documentation, and test files. No dynamic execution of workflows or downstream sync simulation was performed.*
+*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-27 to reflect 6 merged remediations (see plan.md). Findings are based on static analysis of repository structure, configuration files, workflow definitions, documentation, and test files. No dynamic execution of workflows or downstream sync simulation was performed.*
