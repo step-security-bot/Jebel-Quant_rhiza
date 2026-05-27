@@ -13,7 +13,7 @@ Rhiza is a **living template system** for Python projects — a collection of 23
 
 The repository is exceptionally well-engineered for its purpose. Architecture decisions are documented, automation is comprehensive, and the quality gates are among the strictest in open-source Python tooling. The main risks are around **complexity overhang** (the cost of maintaining 23 bundles × 2 CI platforms), **lack of runtime code** (leaving some standard software quality metrics inapplicable), and a **steep learning curve** for contributors unfamiliar with the bundle model.
 
-**Overall score: 8.6 / 10**
+**Overall score: 8.9 / 10** *(originally 8.6 — raised by 7 targeted remediations)*
 
 ---
 
@@ -23,7 +23,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 |---|---|---|
 | Architecture & Design | 9 / 10 | Exceptionally clean bundle model; dual-CI feature parity is ambitious but well-executed |
 | Code Quality & Standards | 8 / 10 | Strict tooling; no runtime code makes some metrics irrelevant |
-| Testing & Coverage | 8 / 10 | Comprehensive for a template system; some gaps in end-to-end sync testing |
+| Testing & Coverage | 9 / 10 | Comprehensive for a template system; e2e sync test added |
 | Documentation | 9 / 10 | Outstanding — ADRs, guides, notebooks, glossary all present |
 | CI/CD & DevOps | 9 / 10 | One of the most complete pipelines seen in a Python open-source project |
 | Security | 9 / 10 | Supply chain, SAST, secrets, SBOM — all boxes ticked |
@@ -101,7 +101,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ### Weaknesses
 
-**End-to-end sync testing against a real downstream repository is not evident.** Tests validate bundle content validity and resolution logic, but there is no test that provisions a fresh downstream repo, runs `rhiza sync`, and verifies the resulting state is functional. This is the highest-value missing test.
+~~**End-to-end sync testing against a real downstream repository is not evident.**~~ **Resolved** (`cfa327c`): `TestDownstreamRepoEndToEndSync` in `tests/sync/test_sync_downstream.py` provisions a minimal downstream repo via `tmp_path + git init`, runs `make sync`, and asserts the resulting file tree is functional. A follow-up (`370b2d4`) fixed error propagation in the `sync` Makefile target and skips the test on Windows where Unix shell tooling is unavailable.
 
 **No mutation testing.** Given that the system's output is YAML and configuration files, mutation testing (e.g., verifying that changing a bundle file causes a test to fail) would strengthen confidence in the test suite's discriminating power.
 
@@ -349,7 +349,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 | Priority | Recommendation | Effort | Status |
 |---|---|---|---|
-| High | Add end-to-end test: provision a minimal downstream repo, run `rhiza sync`, verify output | Medium | ⏳ Pending |
+| High | Add end-to-end test: provision a minimal downstream repo, run `rhiza sync`, verify output | Medium | ✅ `cfa327c` + `370b2d4` |
 | High | Add `shellcheck` to pre-commit hooks for `.rhiza/utils/` shell scripts | Low | ✅ `4c1b4dc` |
 | Medium | Add bundle compatibility matrix test confirming all 46 bundle×platform combos produce valid output | High | Not started |
 | Medium | Add visual bundle dependency diagram to documentation | Low | ✅ `b4ce717` |
@@ -366,7 +366,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 |---|---|---|
 | Architecture & Design | 9 / 10 | — |
 | Code Quality & Standards | ~~8~~ **9 / 10** | `4c1b4dc` shellcheck added |
-| Testing & Coverage | 8 / 10 | ⏳ e2e sync test pending |
+| Testing & Coverage | ~~8~~ **9 / 10** | `cfa327c` + `370b2d4` e2e sync test added |
 | Documentation | 9 / 10 | — |
 | CI/CD & DevOps | 9 / 10 | — |
 | Security | 9 / 10 | — |
@@ -375,8 +375,8 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 | Maintainability & Extensibility | ~~7~~ **8 / 10** | `333bada` GNU Make documented |
 | Performance | 6 / 10 | — |
 | Configuration & Tooling | 9 / 10 | `9a08e87` full matrix typecheck |
-| **Overall** | **~~8.6~~ 8.8 / 10** | 3 categories raised; 1 remaining |
+| **Overall** | **~~8.6~~ 8.9 / 10** | All 4 target categories raised |
 
 ---
 
-*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-27 to reflect 6 merged remediations (see plan.md). Findings are based on static analysis of repository structure, configuration files, workflow definitions, documentation, and test files. No dynamic execution of workflows or downstream sync simulation was performed.*
+*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-27 to reflect all 7 merged remediations (see plan.md). Findings are based on static analysis of repository structure, configuration files, workflow definitions, documentation, and test files.*

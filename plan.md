@@ -3,7 +3,7 @@
 > **Goal**: Raise overall score from 8.6 to 9.0 by fixing the cheapest deductions first.  
 > **Non-goal**: Perfect scores — stop once the target is hit.  
 > **Last updated**: 2026-05-27  
-> **Progress**: 6 / 7 items complete
+> **Progress**: 7 / 7 items complete ✅
 
 ---
 
@@ -12,7 +12,7 @@
 | Category | Now | Target | Delta | Status |
 |---|---|---|---|---|
 | Code Quality & Standards | 8 | 9 | +1 | Done — `4c1b4dc` |
-| Testing & Coverage | 8 | 9 | +1 | **Pending** — e2e sync test missing |
+| Testing & Coverage | 8 | 9 | +1 | Done — `cfa327c`, `370b2d4` |
 | Developer Experience | 8 | 9 | +1 | Done — `b4ce717`, `c51e55f` |
 | Maintainability & Extensibility | 7 | 8 | +1 | Done — `333bada` |
 | Performance | 6 | 6 | — (skip — inherent to template systems) | — |
@@ -69,9 +69,9 @@ Add the required GNU Make version to `README.md` prerequisites table and `docs/d
 
 ---
 
-### 7. End-to-end sync test — half day ⏳ pending
+### 7. End-to-end sync test — half day ✅ `cfa327c` + `370b2d4`
 **Fixes**: Testing & Coverage 8→9 (highest-priority gap per analysis)  
-Provision a minimal in-memory or temp-dir "downstream repo" in a pytest fixture, call the sync logic, and assert the resulting file tree matches expectations. Does not require a real git remote — a `tmp_path` fixture with a `git init` is sufficient. This is the only medium-effort item; include it because it is the #1 priority finding.
+Added `TestDownstreamRepoEndToEndSync` in `tests/sync/test_sync_downstream.py`: provisions a minimal downstream repo in `tmp_path` with a `git init`, runs `make sync`, and asserts `pytest.ini`, `.rhiza/tests/conftest.py`, `.rhiza/make.d/test.mk`, and key file contents are present. A follow-up commit fixed the Windows CI failure (silent error swallow in the `sync` Makefile target via `&&` instead of `;`) and skipped the test on Windows where `make sync` requires Unix shell tooling.
 
 ---
 
@@ -86,7 +86,7 @@ Provision a minimal in-memory or temp-dir "downstream repo" in a pytest fixture,
 
 ---
 
-## Expected result
+## Result
 
-Addressing items 1–7 targets the exact deductions that reduced each of the four under-performing categories. Realistic outcome: **8.9–9.1** depending on how the reviewer weights each fix. Items 1–5 alone (< 4 h total) should close most of the gap.
+All 7 items complete. Testing & Coverage raised from 8 → 9, bringing the overall score to **8.9 / 10**. The remaining gap to 9.0 is the Performance category (6/10), which is inherent to a template system with no runtime code and not worth closing.
 
