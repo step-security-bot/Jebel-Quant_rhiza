@@ -1,9 +1,9 @@
-# Plan: 8.6 → 9.0
+# Plan: 8.9 → 9.5
 
-> **Goal**: Raise overall score from 8.6 to 9.0 by fixing the cheapest deductions first.  
-> **Non-goal**: Perfect scores — stop once the target is hit.  
+> **Goal**: Raise overall score from 8.9 to 9.5.  
+> **Non-goal**: Perfect scores in every category — Performance stays capped below 10 by design.  
 > **Last updated**: 2026-05-27  
-> **Progress**: 7 / 7 items complete ✅
+> **Progress**: 0 / 7 items complete
 
 ---
 
@@ -11,67 +11,81 @@
 
 | Category | Now | Target | Delta | Status |
 |---|---|---|---|---|
-| Code Quality & Standards | 8 | 9 | +1 | Done — `4c1b4dc` |
-| Testing & Coverage | 8 | 9 | +1 | Done — `cfa327c`, `370b2d4` |
-| Developer Experience | 8 | 9 | +1 | Done — `b4ce717`, `c51e55f` |
-| Maintainability & Extensibility | 7 | 8 | +1 | Done — `333bada` |
-| Performance | 6 | 6 | — (skip — inherent to template systems) | — |
+| Performance | 6 | 8 | +2 | Pending |
+| Maintainability & Extensibility | 8 | 10 | +2 | Pending |
+| Security | 9 | 10 | +1 | Pending |
+| Documentation | 9 | 10 | +1 | Pending |
+| Architecture & Design | 9 | 10 | +1 | Pending |
+| CI/CD & DevOps | 9 | 10 | +1 | Pending |
+| Code Quality & Standards | 9 | 10 | +1 | Pending — see item 7 |
 | All others | 9 | 9 | — | — |
 
-Four categories need +1 each. All have low-effort fixes available.
+Seven category-points needed. Performance and Maintainability carry the largest individual gaps.
 
 ---
 
 ## Items (ordered by effort)
 
-### 1. Add `shellcheck` to pre-commit — 30 min ✅ `4c1b4dc`
-**Fixes**: Code Quality 8→9, Security weakness  
-Add `shellcheck` as a pre-commit hook scoped to `.rhiza/utils/*.sh`. Fix any findings (expected to be minor — these are short audit scripts).
+### 1. Automate Bandit suppression review in CI — 1 h
+**Fixes**: Security 9→10  
+Currently `suppression-audit.sh` exists but the suppressions themselves are never validated in CI — a suppression added for a now-fixed CVE lingers indefinitely. Add a CI step that cross-references active `# nosec` comments against the current `pip-audit` report and fails if any suppression covers a CVE that is no longer flagged (i.e., the code was fixed but the suppression was not removed). The existing `suppression-audit.sh` already parses this data; the job is to make it a blocking CI gate.
+
+---
+
+### 2. Add Gitleaks for deep historical secret scanning — 1 h
+**Fixes**: Security 9→10 (complements item 1)  
+GitHub's built-in secret scanning only covers pushed commits going forward. Add a Gitleaks GitHub Actions step (or pre-commit hook) to scan the full history and active working tree for credential patterns. Gitleaks provides a `.gitleaks.toml` for custom rules and false-positive suppression. This closes the gap called out in the analysis without replacing GitHub's native scanner.
 
 ```yaml
-# .pre-commit-config.yaml
-- repo: https://github.com/shellcheck-py/shellcheck-py
-  rev: v0.10.0.1
-  hooks:
-    - id: shellcheck
-      files: \.rhiza/utils/.*\.sh$
+# .github/workflows/rhiza_ci.yml — security job
+- uses: gitleaks/gitleaks-action@v2
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 ```
 
 ---
 
-### 2. Renovate: add GitLab CI ecosystem — 15 min ✅ `a3855cf`
-**Fixes**: Dependency Management weakness (currently 9, keeps it there; removes a called-out gap)  
-Add `"gitlabci"` to the Renovate `packageRules` or `matchManagers` list in `renovate.json` / `.github/renovate.json`.
+### 3. Bundle compatibility matrix test — 4 h
+**Fixes**: Maintainability 8→10 (primary gap)  
+Add a parameterised pytest test in `tests/bundles/` that iterates over all 46 bundle×platform combinations (23 bundles × GitHub + GitLab) and asserts: (a) no YAML parse errors, (b) no file owned by two bundles in the same profile, (c) all bundle dependencies are present. This replaces the implicit assumption that combinations are valid with an explicit regression test. Use `itertools.combinations` over `template-bundles.yml` to generate the matrix — no manual enumeration.
 
 ---
 
-### 3. Bundle dependency diagram — 1 h ✅ `b4ce717`
-**Fixes**: Developer Experience 8→9 (onboarding friction)  
-Add a Mermaid diagram to `docs/reference/GLOSSARY.md` or a new `docs/reference/bundle-map.md` showing which bundles depend on which. MkDocs already supports Mermaid — zero infra cost.
+### 4. Document "global patch" propagation pattern — 2 h
+**Fixes**: Maintainability 8→10 (complements item 3)  
+The single largest maintainability risk is that propagating a change to all bundles (e.g., adopting a new tool) requires editing 23 files with no atomic workflow. Add a `docs/operations/GLOBAL_PATCH.md` describing the pattern: (1) edit the relevant files in each bundle, (2) run `make validate` to catch inconsistencies, (3) use the new `--all-bundles` flag (or a helper script) to diff affected files across bundles. Optionally add a `make diff-bundles VAR=filename` target that shows the same file across all bundles side-by-side.
 
 ---
 
-### 4. `make explain-bundles` target — 1 h ✅ `c51e55f`
-**Fixes**: Developer Experience 8→9 (complements the diagram)  
-Add a target to `make.d/` that prints each bundle name, its description from `template-bundles.yml`, and its direct dependencies. Parses `template-bundles.yml` with `python -c` or `yq` — no new dependencies.
+### 5. Add pytest-xdist and Marimo notebook timeout — 2 h
+**Fixes**: Performance 6→8  
+Two independent sub-items:  
+(a) Add `pytest-xdist` to dev dependencies and `-n auto` to `pytest.ini` (or a `pytest -n auto` invocation in `make test`). This parallelises test execution across available CPU cores on each CI runner, directly reducing wall time for the 12-combination matrix.  
+(b) Add a `timeout-minutes: 10` on the Marimo notebook execution step in `rhiza_marimo.yml` so a runaway computation cannot block the workflow indefinitely.
 
 ---
 
-### 5. Document GNU Make version requirement — 15 min ✅ `333bada`
-**Fixes**: Maintainability 7→8 (specific weakness called out)  
-Add the required GNU Make version to `README.md` prerequisites table and `docs/development/` setup guide. Run `make --version` in CI and assert `>= 4.x` if desired (one-liner).
+### 6. Formalise bundle dependency DAG with cycle detection — 3 h
+**Fixes**: Architecture 9→10  
+`template-bundles.yml` encodes dependencies but they are only consumed at runtime by the rhiza CLI. Add a validation test (or a `make validate` sub-check) that: (a) parses the dependency graph from `template-bundles.yml`, (b) runs cycle detection (topological sort), and (c) fails loudly if a bundle is used without its declared prerequisite in a given profile. This moves bundle correctness from a runtime concern to a pre-commit / CI gate. A simple `graphlib.TopologicalSorter` (stdlib, Python 3.9+) handles this in ~20 lines.
 
 ---
 
-### 6. `ty` on Python 3.11/3.12 matrix jobs — 2 h ✅ `9a08e87`
-**Fixes**: Configuration & Tooling weakness (keeps 9, removes a called-out gap); supports Code Quality 8→9  
-`ty` is 3.13+ only. Add `mypy` (or `pyright`) as a second type-checking step in the 3.11/3.12 CI matrix jobs. Alternatively, run `ty` under 3.13 only and add a comment in `pyproject.toml` scoping this explicitly — documents the limitation rather than leaving it implicit.
+### 7. Add mutation testing with mutmut — 3 h
+**Fixes**: Code Quality 9→10  
+The current suite has 90% line coverage but no verification that the tests are discriminating. Add `mutmut` (or `cosmic-ray`) targeting `tests/` utility functions and the bundle sync logic. Run it in a separate `make mutation-test` target (not in the default `make test` — too slow). Add a CI job that runs `mutmut run` on a subset of files and fails if the mutation score drops below a threshold (e.g., 80%). Document the target in `Makefile` help output. This directly closes the "no mutation testing" weakness in the analysis and is the highest-signal remaining Code Quality improvement.
 
 ---
 
-### 7. End-to-end sync test — half day ✅ `cfa327c` + `370b2d4`
-**Fixes**: Testing & Coverage 8→9 (highest-priority gap per analysis)  
-Added `TestDownstreamRepoEndToEndSync` in `tests/sync/test_sync_downstream.py`: provisions a minimal downstream repo in `tmp_path` with a `git init`, runs `make sync`, and asserts `pytest.ini`, `.rhiza/tests/conftest.py`, `.rhiza/make.d/test.mk`, and key file contents are present. A follow-up commit fixed the Windows CI failure (silent error swallow in the `sync` Makefile target via `&&` instead of `;`) and skipped the test on Windows where `make sync` requires Unix shell tooling.
+### 8. CI/CD: GitLab/GitHub parity smoke test — 2 h
+**Fixes**: CI/CD 9→10  
+The analysis flags that GitHub Actions and GitLab CI parity requires manual synchronisation. Add a test (or `make validate` sub-check) that parses both `.github/workflows/rhiza_ci.yml` and `.gitlab-ci.yml` and asserts that: (a) the same job names exist in both, (b) the same Python version matrix is referenced, (c) both have equivalent test/lint/security steps. This does not run both CI systems end-to-end — it statically validates that the structural invariants hold, catching drift before it causes a silent breakage.
+
+---
+
+### 9. Step-by-step "add a new bundle" tutorial — 2 h
+**Fixes**: Documentation 9→10  
+`EXTENDING_RHIZA.md` describes the extension mechanism conceptually but lacks a worked example. Add a numbered walkthrough: (1) create the bundle directory, (2) add files, (3) declare dependencies in `template-bundles.yml`, (4) add bundle content tests, (5) run `make validate`, (6) open a PR. Include one real example (e.g., a minimal `linter` bundle that adds a `.ruff.toml` override). This is the highest-friction onboarding gap remaining after the diagram and `make explain-bundles` additions.
 
 ---
 
@@ -79,14 +93,24 @@ Added `TestDownstreamRepoEndToEndSync` in `tests/sync/test_sync_downstream.py`: 
 
 | Item | Why skip |
 |---|---|
-| Bundle compatibility matrix (46 combos) | High effort, already partially covered by existing bundle content tests |
-| Stale Bandit suppression review | Operational task, not a code change; do it as part of a normal sprint |
-| Plugin registry / bundle versioning | Architectural change, out of scope |
-| CI time budget / test sharding | No evidence it is actually slow; premature optimisation |
+| Performance 8→10 | No runtime code; CI parallelism already addresses the actionable gaps |
+| Plugin registry / bundle versioning | Architectural change; requires rhiza-cli coordination |
+| Stale Bandit suppression manual review | Covered by item 1 (automated) |
+| DAST / fuzzing | No dynamic attack surface in this repo |
+| `pyright`/`mypy` for 3.11/3.12 | `ty` already runs on full matrix per `9a08e87`; additional checker is redundant |
 
 ---
 
-## Result
+## Expected result
 
-All 7 items complete. Testing & Coverage raised from 8 → 9, bringing the overall score to **8.9 / 10**. The remaining gap to 9.0 is the Performance category (6/10), which is inherent to a template system with no runtime code and not worth closing.
+Items 1–9 address the exact deductions in each under-performing category:
+- Items 1–2: Security 9→10 (+1)
+- Items 3–4: Maintainability 8→10 (+2)
+- Item 5: Performance 6→8 (+2)
+- Item 6: Architecture 9→10 (+1)
+- Item 7: Code Quality 9→10 (+1)
+- Item 8: CI/CD 9→10 (+1)
+- Item 9: Documentation 9→10 (+1)
 
+Total: +9 category points → 104/11 ≈ **9.45**, rounding to **9.5**.  
+Items 1–6 alone (< 12 h total) deliver +7 points and reach the target.
