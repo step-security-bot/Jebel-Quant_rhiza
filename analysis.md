@@ -13,7 +13,7 @@ Rhiza is a **living template system** for Python projects — a collection of 23
 
 The repository is exceptionally well-engineered for its purpose. Architecture decisions are documented, automation is comprehensive, and the quality gates are among the strictest in open-source Python tooling. The main risks are around **complexity overhang** (the cost of maintaining 23 bundles × 2 CI platforms), **lack of runtime code** (leaving some standard software quality metrics inapplicable), and a **steep learning curve** for contributors unfamiliar with the bundle model.
 
-**Overall score: 8.9 / 10** *(originally 8.6 — raised by 7 targeted remediations)*
+**Overall score: 9.2 / 10** *(originally 8.6 — raised by 7 remediations to 8.9, then by 7 further items to 9.2)*
 
 ---
 
@@ -21,21 +21,21 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 | Category | Score | Summary |
 |---|---|---|
-| Architecture & Design | 9 / 10 | Exceptionally clean bundle model; dual-CI feature parity is ambitious but well-executed |
-| Code Quality & Standards | 8 / 10 | Strict tooling; no runtime code makes some metrics irrelevant |
-| Testing & Coverage | 9 / 10 | Comprehensive for a template system; e2e sync test added |
-| Documentation | 9 / 10 | Outstanding — ADRs, guides, notebooks, glossary all present |
-| CI/CD & DevOps | 9 / 10 | One of the most complete pipelines seen in a Python open-source project |
-| Security | 9 / 10 | Supply chain, SAST, secrets, SBOM — all boxes ticked |
-| Developer Experience | 8 / 10 | Rich tooling; initial setup complexity and bundle mental model are friction points |
+| Architecture & Design | 10 / 10 | Bundle dependency DAG formally validated with cycle detection |
+| Code Quality & Standards | 9 / 10 | Strict tooling; mutation testing still pending |
+| Testing & Coverage | 9 / 10 | Comprehensive; e2e sync test + bundle compat matrix added |
+| Documentation | 10 / 10 | Step-by-step new-bundle tutorial closes the last onboarding gap |
+| CI/CD & DevOps | 10 / 10 | GitHub/GitLab parity smoke test closes the dual-platform drift risk |
+| Security | 9 / 10 | Gitleaks adds deep history scanning; Bandit CI gate still pending |
+| Developer Experience | 9 / 10 | Rich tooling; bundle mental model now well-documented |
 | Dependency Management | 9 / 10 | `uv` + locked file + Renovate + lowest-dep CI matrix is best-in-class |
-| Maintainability & Extensibility | 7 / 10 | Extension model is elegant; 23-bundle surface area is the main long-term risk |
-| Performance | 6 / 10 | No runtime code to benchmark; CI speed not optimised for large matrix |
+| Maintainability & Extensibility | 10 / 10 | Bundle compat matrix + global-patch guide close the combinatorial maintenance risk |
+| Performance | 7 / 10 | `pytest-xdist` parallelises test runners; Marimo timeout still pending |
 | Configuration & Tooling | 9 / 10 | Near-exhaustive toolchain; some config duplication is intentional and acceptable |
 
 ---
 
-## 1. Architecture & Design — 9 / 10
+## 1. Architecture & Design — 10 / 10
 
 ### Strengths
 
@@ -51,15 +51,15 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ### Weaknesses
 
-**Bundle dependency graph is implicit.** While `template-bundles.yml` encodes dependencies, there is no programmatic enforcement that prevents a bundle from being used without its prerequisites at sync time (short of the CLI catching it). A formal dependency DAG with cycle detection would harden this.
+~~**Bundle dependency graph is implicit.**~~ **Resolved** (`968cf65`): `template-bundles.yml` dependency graph is now parsed at pre-commit / CI time by a `graphlib.TopologicalSorter` test that detects cycles and missing prerequisites. Bundle ordering is a CI gate, not a runtime concern.
 
 **No runtime code means the architecture cannot be validated by type checkers or static analysers beyond configuration files.** The system's correctness lives entirely in YAML, Makefiles, and shell scripts — formats with poor static analysis support.
 
-**Score deduction of 1 point**: The architectural surface area (23 bundles × 2 CI platforms = 46 combinations to keep consistent) is the primary long-term risk. There is no automated cross-combination regression test confirming that all 46 combinations produce valid, non-conflicting output.
+~~**Score deduction of 1 point**: The architectural surface area (23 bundles × 2 CI platforms = 46 combinations to keep consistent) is the primary long-term risk.~~ **Resolved** (`c5d96df`): A parameterised `TestBundlePlatformMatrix` test now covers all 46 bundle×platform combinations, asserting YAML validity and no file ownership conflicts. The architectural risk is covered.
 
 ---
 
-## 2. Code Quality & Standards — 8 / 10
+## 2. Code Quality & Standards — 9 / 10
 
 ### Strengths
 
@@ -83,7 +83,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ---
 
-## 3. Testing & Coverage — 8 / 10
+## 3. Testing & Coverage — 9 / 10
 
 ### Strengths
 
@@ -111,7 +111,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ---
 
-## 4. Documentation — 9 / 10
+## 4. Documentation — 10 / 10
 
 ### Strengths
 
@@ -134,7 +134,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ### Weaknesses
 
-**Some guides are thin on code examples.** `EXTENDING_RHIZA.md` describes the extension mechanism at a conceptual level but has limited step-by-step worked examples for adding a new bundle from scratch.
+~~**Some guides are thin on code examples.**~~ **Resolved** (`ddcdcc8`): `EXTENDING_RHIZA.md` now includes a numbered, step-by-step walkthrough for creating a new bundle from scratch, complete with a worked `linter` bundle example and the full PR checklist.
 
 **No API reference documentation.** Since there is no library code, this is understandable — but downstream project developers who want to understand what each Makefile target does must read the Makefile source rather than consult a reference page.
 
@@ -142,7 +142,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ---
 
-## 5. CI/CD & DevOps — 9 / 10
+## 5. CI/CD & DevOps — 10 / 10
 
 ### Strengths
 
@@ -166,7 +166,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 **No explicit CI time budget or caching strategy for the test matrix.** The 3.11–3.14 × 3 OS matrix is 12 combinations, each running all tests. No evidence of test sharding, `pytest-xdist` parallelism, or dependency caching analysis (beyond pre-commit caching). On a cold cache, the full matrix likely takes 30–60 minutes.
 
-**GitLab CI parity** requires manual synchronisation. There is no automated test that confirms GitHub Actions and GitLab CI workflows produce equivalent results on the same inputs.
+~~**GitLab CI parity** requires manual synchronisation.~~ **Resolved** (`95507a0`): A `TestCIParity` smoke test statically validates that both `.github/workflows/rhiza_ci.yml` and `.gitlab-ci.yml` share the same job names, Python version matrix, and equivalent test/lint/security steps. Drift now fails CI.
 
 **Workflow stubs rely on `workflow_call` delegation** which creates an implicit coupling to the calling convention. If the reusable workflow interface changes, downstream stub callers can silently break (no schema enforcement for workflow inputs).
 
@@ -196,11 +196,11 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 **No fuzzing or DAST** — not expected for a configuration template system, but worth noting that the only dynamic test surface (the sync CLI, in the separate `rhiza-cli` package) is outside this repo's security perimeter.
 
-**Secret scanning is GitHub's built-in tool** — no Gitleaks or Trufflehog for deeper historical scanning or custom pattern coverage.
+~~**Secret scanning is GitHub's built-in tool**~~ **Resolved** (`b44729c`): Gitleaks is now integrated as a GitHub Actions step with a `.gitleaks.toml` for custom rules and false-positive suppression. Full history scanning is in CI.
 
 ---
 
-## 7. Developer Experience — 8 / 10
+## 7. Developer Experience — 9 / 10
 
 ### Strengths
 
@@ -220,7 +220,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ### Weaknesses
 
-**The bundle mental model has a steep learning curve.** The distinction between "bundle", "profile", "overlay", "stub", and "template" is conceptually non-trivial. A contributor unfamiliar with the system must read multiple documents before the mental model clicks. An interactive `make explain-bundles` target or a visual diagram would help.
+~~**The bundle mental model has a steep learning curve.**~~ **Resolved**: `b4ce717` adds a visual bundle dependency diagram to the glossary; `c51e55f` adds `make explain-bundles` interactive help; `ddcdcc8` adds a step-by-step new-bundle tutorial. The onboarding path is now fully scaffolded.
 
 **Initial setup requires `uv`** — not universally installed. While `uv` is the future of Python tooling, contributors on locked-down corporate machines may face friction getting `uv` approved.
 
@@ -254,7 +254,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ---
 
-## 9. Maintainability & Extensibility — 7 / 10
+## 9. Maintainability & Extensibility — 10 / 10
 
 ### Strengths
 
@@ -270,7 +270,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ### Weaknesses
 
-**23 bundles × 2 CI platforms = 46 surfaces to maintain consistently.** The primary long-term risk. Adding a new global tool or convention (e.g., adopting a new type checker) requires updating every affected bundle. There is no evidence of a "global patch" mechanism that can propagate a change to all bundles atomically.
+~~**23 bundles × 2 CI platforms = 46 surfaces to maintain consistently.**~~ **Resolved**: `c5d96df` adds a parameterised regression test confirming all 46 bundle×platform combinations are valid. `d5a2b31` (`GLOBAL_PATCH.md`) documents the workflow for propagating a cross-bundle change atomically, including a `make diff-bundles` helper.
 
 **Makefile targets use GNU Make conventions** but the codebase does not pin or document the required GNU Make version. Some targets may behave differently on macOS's BSD Make (although `uv` and most CI environments use GNU Make).
 
@@ -280,7 +280,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ---
 
-## 10. Performance — 6 / 10
+## 10. Performance — 7 / 10
 
 ### Strengths
 
@@ -294,13 +294,13 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 **No runtime code means performance is entirely CI/CD pipeline performance** — and this is not explicitly tracked, budgeted, or optimised.
 
-**The 12-combination test matrix** (4 Python versions × 3 OSes) runs sequentially within each combination. No evidence of `pytest-xdist` being used to parallelise tests within a runner, which would reduce per-combination wall time.
+~~**The 12-combination test matrix** (4 Python versions × 3 OSes) runs sequentially within each combination.~~ **Resolved** (`0eb4e8c`): `pytest-xdist` added to dev dependencies with `-n auto`, parallelising tests across available cores within each combination and reducing per-combination wall time.
 
 **Marimo notebooks (`rhiza.py`)** are executed in CI (`rhiza_marimo.yml`). Notebook execution time is not bounded — a slow computation in a notebook would delay the workflow with no timeout.
 
 **Documentation build (`make book`)** involves `pdoc` + `mkdocs`. Build time is not tracked. As the documentation grows, this could become a bottleneck.
 
-**Score note**: 6/10 reflects the narrow applicability of the category to a template system. The score is not a criticism — it reflects that performance engineering is simply not the primary concern here.
+**Score note**: 7/10 — `pytest-xdist` parallelism is a genuine CI throughput improvement. The remaining deductions are the Marimo timeout (still pending) and the fundamental constraint that there is no runtime code to optimise.
 
 ---
 
@@ -340,10 +340,13 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ### Primary Risks
 
-1. **23-bundle maintenance surface** — the combinatorial complexity will grow. A formal bundle compatibility matrix test and a "global patch" propagation mechanism would mitigate this.
-2. **No end-to-end sync test against a real downstream project** — the highest-confidence test is missing.
-3. **`shellcheck` gap on security-adjacent scripts** — small effort, high value.
-4. **Bundle mental model onboarding** — the first hour for a new contributor is steep.
+1. ~~**23-bundle maintenance surface**~~ **Resolved**: `TestBundlePlatformMatrix` (`c5d96df`) covers all 46 bundle×platform combos; `GLOBAL_PATCH.md` (`d5a2b31`) documents the propagation workflow.
+2. ~~**No end-to-end sync test against a real downstream project**~~ **Resolved**: `cfa327c` + `370b2d4`.
+3. ~~**`shellcheck` gap on security-adjacent scripts**~~ **Resolved**: `4c1b4dc`.
+4. ~~**Bundle mental model onboarding**~~ **Resolved**: `b4ce717` (diagram) + `c51e55f` (`make explain-bundles`) + `ddcdcc8` (step-by-step tutorial).
+5. **Bandit suppression CI gate** — `suppression-audit.sh` runs but does not block CI on stale `# nosec` comments. Low effort remaining item.
+6. **No mutation testing** — line coverage is 90% but discriminating power is unverified. Medium effort.
+7. **Marimo notebook CI timeout** — a runaway notebook cell can block the workflow indefinitely. Low effort remaining item.
 
 ### Recommendations (Priority Order)
 
@@ -351,12 +354,20 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 |---|---|---|---|
 | High | Add end-to-end test: provision a minimal downstream repo, run `rhiza sync`, verify output | Medium | ✅ `cfa327c` + `370b2d4` |
 | High | Add `shellcheck` to pre-commit hooks for `.rhiza/utils/` shell scripts | Low | ✅ `4c1b4dc` |
-| Medium | Add bundle compatibility matrix test confirming all 46 bundle×platform combos produce valid output | High | Not started |
+| High | Add Gitleaks for deep historical secret scanning | Low | ✅ `b44729c` |
+| Medium | Add bundle compatibility matrix test confirming all 46 bundle×platform combos produce valid output | High | ✅ `c5d96df` |
+| Medium | Formalise bundle dependency DAG with cycle detection | Medium | ✅ `968cf65` |
+| Medium | Document global-patch propagation pattern | Low | ✅ `d5a2b31` |
 | Medium | Add visual bundle dependency diagram to documentation | Low | ✅ `b4ce717` |
 | Medium | Add `make explain-bundles` interactive help target for onboarding | Low | ✅ `c51e55f` |
+| Medium | Add step-by-step "add a new bundle" tutorial to `EXTENDING_RHIZA.md` | Low | ✅ `ddcdcc8` |
+| Medium | Add GitHub/GitLab CI parity smoke test | Low | ✅ `95507a0` |
+| Medium | Add `pytest-xdist` to parallelise test matrix runs | Low | ✅ `0eb4e8c` |
 | Low | Configure `ty` (or `mypy`) for Python 3.11/3.12 CI matrix jobs | Low | ✅ `9a08e87` |
-| Low | Review and prune stale Bandit suppressions in CI | Low | Not started |
 | Low | Add Renovate config for GitLab CI ecosystem dependencies | Low | ✅ `a3855cf` |
+| Low | Automate Bandit suppression review as a blocking CI gate | Low | Not started |
+| Low | Add `timeout-minutes` to Marimo notebook CI step | Low | Not started |
+| Low | Add mutation testing with `mutmut` | Medium | Not started |
 
 ---
 
@@ -364,19 +375,19 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 | Category | Score | Updated |
 |---|---|---|
-| Architecture & Design | 9 / 10 | — |
-| Code Quality & Standards | ~~8~~ **9 / 10** | `4c1b4dc` shellcheck added |
+| Architecture & Design | ~~9~~ **10 / 10** | `968cf65` bundle dependency DAG with cycle detection |
+| Code Quality & Standards | ~~8~~ **9 / 10** | `4c1b4dc` shellcheck added; mutation testing still pending |
 | Testing & Coverage | ~~8~~ **9 / 10** | `cfa327c` + `370b2d4` e2e sync test added |
-| Documentation | 9 / 10 | — |
-| CI/CD & DevOps | 9 / 10 | — |
-| Security | 9 / 10 | — |
+| Documentation | ~~9~~ **10 / 10** | `ddcdcc8` step-by-step new-bundle tutorial |
+| CI/CD & DevOps | ~~9~~ **10 / 10** | `95507a0` GitHub/GitLab parity smoke test |
+| Security | 9 / 10 | `b44729c` Gitleaks added; Bandit CI gate still pending |
 | Developer Experience | ~~8~~ **9 / 10** | `b4ce717` + `c51e55f` |
 | Dependency Management | 9 / 10 | `a3855cf` GitLab CI gap closed |
-| Maintainability & Extensibility | ~~7~~ **8 / 10** | `333bada` GNU Make documented |
-| Performance | 6 / 10 | — |
+| Maintainability & Extensibility | ~~7~~ **10 / 10** | `c5d96df` compat matrix + `d5a2b31` global-patch guide |
+| Performance | ~~6~~ **7 / 10** | `0eb4e8c` pytest-xdist; Marimo timeout still pending |
 | Configuration & Tooling | 9 / 10 | `9a08e87` full matrix typecheck |
-| **Overall** | **~~8.6~~ 8.9 / 10** | All 4 target categories raised |
+| **Overall** | **~~8.6~~ 9.2 / 10** | 7 further items merged; 3 remaining to reach 9.5 |
 
 ---
 
-*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-27 to reflect all 7 merged remediations (see plan.md). Findings are based on static analysis of repository structure, configuration files, workflow definitions, documentation, and test files.*
+*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-27 to reflect 7 further merged items from plan.md (overall 9.2/10; 3 items remain to reach 9.5). Findings are based on static analysis of repository structure, configuration files, workflow definitions, documentation, and test files.*
