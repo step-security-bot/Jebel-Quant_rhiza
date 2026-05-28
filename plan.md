@@ -1,9 +1,9 @@
-# Plan: 9.3 → 10.0
+# Plan: 9.5 → 10.0
 
-> **Goal**: Raise overall score from 9.3 to 10.0 (110 / 11 = perfect average across all categories).
+> **Goal**: Raise overall score from 9.5 to 10.0 (110 / 11 = perfect average across all categories).
 > **Non-goal**: Skipping categories — every category must reach 10; no floor of 9 is acceptable.
 > **Last updated**: 2026-05-28
-> **Progress**: 8 / 15 items complete
+> **Progress**: 10 / 15 items complete
 
 ---
 
@@ -13,21 +13,21 @@
 |---|---|---|---|---|
 | Architecture & Design | **10** | 10 | — | ✅ `968cf65` |
 | Code Quality & Standards | 9 | 10 | +1 | Item 7 ⏳ pending |
-| Testing & Coverage | 9 | 10 | +1 | Item 10 ⏳ pending |
+| Testing & Coverage | **10** | 10 | — | ✅ `bdc552c` |
 | Documentation | **10** | 10 | — | ✅ `ddcdcc8` |
 | CI/CD & DevOps | **10** | 10 | — | ✅ `95507a0` |
 | Security | **10** | 10 | — | ✅ `7263d5b` + `b44729c` |
-| Developer Experience | 9 | 10 | +1 | Item 11 ⏳ pending |
+| Developer Experience | **10** | 10 | — | ✅ `2650576` |
 | Dependency Management | 9 | 10 | +1 | Item 12 ⏳ pending |
 | Maintainability & Extensibility | **10** | 10 | — | ✅ `7c53a09` + `d5a2b31` |
-| Performance | 7 | 10 | +3 | Items 5b, 13, 14 ⏳ pending |
+| Performance | 8 | 10 | +2 | Items 13, 14 ⏳ pending |
 | Configuration & Tooling | 9 | 10 | +1 | Item 15 ⏳ pending |
 
-Eight category-points needed across 6 categories. Performance carries the largest individual gap (+3).
+Five category-points needed across 4 categories. Performance carries the largest individual gap (+2).
 
 ---
 
-## Completed items (8 / 15)
+## Completed items (10 / 15)
 
 | Item | Commit | Category impact |
 |---|---|---|
@@ -36,29 +36,16 @@ Eight category-points needed across 6 categories. Performance carries the larges
 | 3 Bundle compat matrix | `7c53a09` | Maintainability 8→10 |
 | 4 Global patch docs | `d5a2b31` | Maintainability 8→10 |
 | 5a pytest-xdist | `0eb4e8c` | Performance 6→7 |
+| 5b Marimo CI timeout | `3e1d07f` | Performance 7→8 |
 | 6 DAG validation | `968cf65` | Architecture 9→10 |
 | 8 CI parity test | `95507a0` | CI/CD 9→10 |
 | 9 New bundle tutorial | `ddcdcc8` | Documentation 9→10 |
+| 10 pytest-timeout + sync failure tests | `bdc552c` | Testing 9→10 |
+| 11 make doctor + troubleshooting guide | `2650576` | DX 9→10 |
 
 ---
 
 ## Pending items (ordered by effort)
-
-### 5b. Marimo notebook CI timeout — 30 min ⏳ Pending · [#1108](https://github.com/Jebel-Quant/rhiza/issues/1108)
-
-**Fixes**: Performance 7→8
-Add `timeout-minutes: 10` to the Marimo notebook execution step in `rhiza_marimo.yml`. A runaway cell (e.g., an infinite
-Hypothesis search or a slow data load) currently blocks the entire workflow indefinitely. Ten minutes is generous for
-any notebook that documents a template system; adjust downward once baseline is measured.
-
-```yaml
-# .github/workflows/rhiza_marimo.yml
-- name: Run Marimo notebooks
-  timeout-minutes: 10
-  run: uv run marimo run docs/notebooks/rhiza.py
-```
-
----
 
 ### 7. Add mutation testing with mutmut — 3 h ⏳ Pending · [#1109](https://github.com/Jebel-Quant/rhiza/issues/1109)
 
@@ -75,48 +62,6 @@ target in `make help` output.
 paths_to_mutate = [".rhiza/utils/", "tests/"]
 tests_dir = "tests/"
 ```
-
----
-
-### 10. Add pytest-timeout + sync failure-mode tests — 2 h ⏳ Pending · [#1110](https://github.com/Jebel-Quant/rhiza/issues/1110)
-
-**Fixes**: Testing & Coverage 9→10
-Two sub-items that together close the "test execution time not tracked" and "error-path coverage absent" weaknesses:
-
-(a) **Global test timeout**: add `pytest-timeout` to dev dependencies and set `timeout = 60` in `pytest.ini`. This makes
-every test subject to a 60-second budget — a test that hangs (e.g., a blocking network call in a test stub) fails fast
-rather than freezing the runner. Fails CI if any single test exceeds the budget without an explicit
-`@pytest.mark.timeout(N)` override.
-
-(b) **Sync failure-mode tests**: extend `tests/sync/test_sync_downstream.py` with three negative-path cases: (i)
-upstream bundle has invalid YAML → assert sync exits non-zero with a message containing the filename; (ii) a declared
-dependency bundle is absent from the profile → assert the error names the missing bundle; (iii) downstream target
-directory is read-only → assert sync rolls back cleanly (no partial writes). These verify that `cfa327c`'s
-error-propagation fix is correct under the full failure taxonomy.
-
----
-
-### 11. Add `make doctor` target + troubleshooting guide — 2 h ⏳ Pending · [#1111](https://github.com/Jebel-Quant/rhiza/issues/1111)
-
-**Fixes**: Developer Experience 9→10
-Two sub-items that close the "uv friction on locked-down machines" and "sync error messages undocumented" weaknesses:
-
-(a) **`make doctor`**: a new Makefile target (in `make.d/doctor.mk`) that checks each prerequisite with a version floor
-and prints a colour-coded pass/fail table:
-
-```text
-[✅] uv        0.5.3   ≥ 0.4.0
-[✅] python    3.12.2  ≥ 3.11.0
-[✅] make      4.4.1   ≥ 4.3.0   (GNU required)
-[❌] git       missing — install: https://git-scm.com
-```
-
-Exits non-zero if any check fails. Registered in `make help` under the `Dev` group. Linked from `CONTRIBUTING.md` as the
-first troubleshooting step.
-
-(b) **`docs/troubleshooting.md`**: documents the three most common sync failure modes — "bundle not found," "file
-conflict between bundles," "sync leaves partial state" — with the exact error message pattern, root cause, and recovery
-command. Linked from `README.md` and `EXTENDING_RHIZA.md`.
 
 ---
 
@@ -144,7 +89,7 @@ script. Maintains a top-level `uv sync` (all groups) for full development.
 ### 13. Add per-job `timeout-minutes` + CI caching audit — 2 h ⏳ Pending · [#1113](https://github.com/Jebel-Quant/rhiza/issues/1113)
 
 **Fixes**: Performance 8→9
-After item 5b closes the Marimo gap (7→8), the remaining Performance deduction is "no explicit CI time budget or caching
+Item 5b closed the Marimo gap (Performance now 8). The remaining deduction is "no explicit CI time budget or caching
 strategy." Two sub-items:
 
 (a) **Per-job timeouts**: audit every job in `.github/workflows/rhiza_ci.yml` and `.gitlab-ci.yml` and add
@@ -228,11 +173,11 @@ All 15 items complete. Score progression:
 
 | Milestone | Score | Formula |
 |---|---|---|
-| Current (8 items done) | **9.3** | 102 / 11 |
-| After items 5b + 7 | **9.5** | 104 / 11 ≈ 9.45 |
-| After items 10 + 11 + 12 | **9.7** | 107 / 11 ≈ 9.73 |
+| Current (10 items done) | **9.5** | 105 / 11 |
+| After item 7 (Code Quality 9→10) | **9.6** | 106 / 11 ≈ 9.64 |
+| After item 12 (Dependency 9→10) | **9.7** | 107 / 11 ≈ 9.73 |
 | After items 13 + 14 (Performance 8→10) | **9.9** | 109 / 11 ≈ 9.91 |
-| After item 15 | **10.0** | 110 / 11 = 10.00 |
+| After item 15 (Config & Tooling 9→10) | **10.0** | 110 / 11 = 10.00 |
 
 Final category targets:
 

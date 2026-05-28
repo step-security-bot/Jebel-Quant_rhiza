@@ -20,8 +20,8 @@ comprehensive, and the quality gates are among the strictest in open-source Pyth
 standard software quality metrics inapplicable), and a **steep learning curve** for contributors unfamiliar with the
 bundle model.
 
-**Overall score: 9.3 / 10** *(originally 8.6 — raised by 7 remediations to 8.9, then by 7 further items to 9.2, then by
-Bandit CI gate to 9.3)*
+**Overall score: 9.5 / 10** *(originally 8.6 — raised by 7 remediations to 8.9, then by 7 further items to 9.2, then by
+Bandit CI gate to 9.3, then by items 5b/10/11 to 9.5)*
 
 ---
 
@@ -31,14 +31,14 @@ Bandit CI gate to 9.3)*
 |---|---|---|
 | Architecture & Design | 10 / 10 | Bundle dependency DAG formally validated with cycle detection |
 | Code Quality & Standards | 9 / 10 | Strict tooling; mutation testing still pending |
-| Testing & Coverage | 9 / 10 | Comprehensive; e2e sync test + bundle compat matrix added |
+| Testing & Coverage | 10 / 10 | `pytest-timeout` + sync failure-mode tests close the last gaps |
 | Documentation | 10 / 10 | Step-by-step new-bundle tutorial closes the last onboarding gap |
 | CI/CD & DevOps | 10 / 10 | GitHub/GitLab parity smoke test closes the dual-platform drift risk |
 | Security | 10 / 10 | Gitleaks + Bandit CI gate both active |
-| Developer Experience | 9 / 10 | Rich tooling; bundle mental model now well-documented |
+| Developer Experience | 10 / 10 | `make doctor` + troubleshooting guide close the DX gaps |
 | Dependency Management | 9 / 10 | `uv` + locked file + Renovate + lowest-dep CI matrix is best-in-class |
 | Maintainability & Extensibility | 10 / 10 | Bundle compat matrix + global-patch guide close the combinatorial maintenance risk |
-| Performance | 7 / 10 | `pytest-xdist` parallelises test runners; Marimo timeout still pending |
+| Performance | 8 / 10 | Marimo CI timeout added; per-job budgets + docs-build caching still pending |
 | Configuration & Tooling | 9 / 10 | Near-exhaustive toolchain; some config duplication is intentional and acceptable |
 
 ---
@@ -120,7 +120,7 @@ different conventions.
 
 ---
 
-## 3. Testing & Coverage — 9 / 10
+## 3. Testing & Coverage — 10 / 10
 
 ### Strengths
 
@@ -155,8 +155,15 @@ unavailable.
 verifying that changing a bundle file causes a test to fail) would strengthen confidence in the test suite's
 discriminating power.
 
-**Test execution time for the full matrix** (Python 3.11–3.14 × ubuntu/macos/windows) is not tracked or bounded. No
-indication of test parallelism configuration beyond the default `pytest-xdist` availability.
+~~**Test execution time for the full matrix** (Python 3.11–3.14 × ubuntu/macos/windows) is not tracked or bounded.~~
+**Resolved** (`bdc552c`): `pytest-timeout` added to dev dependencies with a global `timeout = 60` in `pytest.ini`,
+bounding every test at 60 seconds. Three negative-path sync failure-mode tests were added to
+`tests/sync/test_sync_downstream.py` covering invalid YAML, missing dependency bundle, and read-only target directory
+scenarios.
+
+~~**Bundle duplicate-file invariant not enforced.**~~ **Resolved** (`e031087`): A new invariant test in
+`test_template_bundles.py` asserts that no bundle maps two source files to the same target path, preventing silent
+overwrites during sync.
 
 **GitHub Actions workflow tests** validate that stub YAMLs compile, but do not run the workflows end-to-end against a
 test repository in a sandbox environment.
@@ -288,7 +295,7 @@ Actions step with a `.gitleaks.toml` for custom rules and false-positive suppres
 
 ---
 
-## 7. Developer Experience — 9 / 10
+## 7. Developer Experience — 10 / 10
 
 ### Strengths
 
@@ -322,8 +329,10 @@ new-bundle tutorial. The onboarding path is now fully scaffolded.
 **Initial setup requires `uv`** — not universally installed. While `uv` is the future of Python tooling, contributors on
 locked-down corporate machines may face friction getting `uv` approved.
 
-**Error messages from bundle sync failures** are not described in the documentation. It is unclear whether a failed sync
-rolls back, leaves the downstream project in a partial state, or provides actionable diagnostics.
+~~**Error messages from bundle sync failures** are not described in the documentation.~~ **Resolved** (`2650576`):
+`make doctor` (in `make.d/doctor.mk`) checks all prerequisites with version floors and prints a colour-coded pass/fail
+table. `docs/troubleshooting.md` documents the three most common sync failure modes with exact error patterns, root
+causes, and recovery commands. Both are linked from `CONTRIBUTING.md` and `README.md`.
 
 **`CLAUDE.md`** is present (good), but its content is not reviewed here. AI-assisted development is increasingly
 important and having correct guidance here matters.
@@ -399,7 +408,7 @@ requirements.
 
 ---
 
-## 10. Performance — 7 / 10
+## 10. Performance — 8 / 10
 
 ### Strengths
 
@@ -420,14 +429,17 @@ budgeted, or optimised.
 **Resolved** (`0eb4e8c`): `pytest-xdist` added to dev dependencies with `-n auto`, parallelising tests across available
 cores within each combination and reducing per-combination wall time.
 
-**Marimo notebooks (`rhiza.py`)** are executed in CI (`rhiza_marimo.yml`). Notebook execution time is not bounded — a
-slow computation in a notebook would delay the workflow with no timeout.
+~~**Marimo notebooks (`rhiza.py`)** are executed in CI without a timeout.~~ **Resolved** (`3e1d07f`):
+`timeout-minutes: 10` added to the Marimo notebook execution step in `rhiza_marimo.yml`, bounding runaway cells.
 
 **Documentation build (`make book`)** involves `pdoc` + `mkdocs`. Build time is not tracked. As the documentation grows,
 this could become a bottleneck.
 
-**Score note**: 7/10 — `pytest-xdist` parallelism is a genuine CI throughput improvement. The remaining deductions are
-the Marimo timeout (still pending) and the fundamental constraint that there is no runtime code to optimise.
+**No explicit per-job CI time budget or caching strategy documented.** The test matrix has no `timeout-minutes` guards
+and no `CI_PERFORMANCE.md` baseline document.
+
+**Score note**: 8/10 — Marimo timeout closes the most immediate risk. Remaining deductions are the per-job CI budget /
+caching audit (item 13) and docs-build caching + benchmark CI job (item 14).
 
 ---
 
@@ -487,7 +499,7 @@ versions, a second type checker configured for those versions is needed.
    `ddcdcc8` (step-by-step tutorial).
 5. ~~**Bandit suppression CI gate**~~ **Resolved** (`7263d5b`): blocking CI gate added to `rhiza_ci.yml`.
 6. **No mutation testing** — line coverage is 90% but discriminating power is unverified. Medium effort.
-7. **Marimo notebook CI timeout** — a runaway notebook cell can block the workflow indefinitely. Low effort remaining item.
+7. ~~**Marimo notebook CI timeout**~~ **Resolved** (`3e1d07f`): `timeout-minutes: 10` added to `rhiza_marimo.yml`.
 
 ### Recommendations (Priority Order)
 
@@ -507,10 +519,10 @@ versions, a second type checker configured for those versions is needed.
 | Low | Configure `ty` (or `mypy`) for Python 3.11/3.12 CI matrix jobs | Low | ✅ `9a08e87` |
 | Low | Add Renovate config for GitLab CI ecosystem dependencies | Low | ✅ `a3855cf` |
 | Low | Automate Bandit suppression review as a blocking CI gate | Low | ✅ `7263d5b` |
-| Low | Add `timeout-minutes` to Marimo notebook CI step | Low | Not started |
+| Low | Add `timeout-minutes` to Marimo notebook CI step | Low | ✅ `3e1d07f` |
 | Low | Add mutation testing with `mutmut` | Medium | Not started |
-| Low | Add `pytest-timeout` + sync failure-mode tests | Low | Not started |
-| Low | Add `make doctor` target + `docs/troubleshooting.md` | Low | Not started |
+| Low | Add `pytest-timeout` + sync failure-mode tests | Low | ✅ `bdc552c` |
+| Low | Add `make doctor` target + `docs/troubleshooting.md` | Low | ✅ `2650576` |
 | Low | Add `uv` optional dependency groups for lightweight installs | Low | Not started |
 | Low | Add per-job CI `timeout-minutes` + caching audit | Low | Not started |
 | Low | Add docs build caching + benchmark CI job | Medium | Not started |
@@ -524,21 +536,21 @@ versions, a second type checker configured for those versions is needed.
 |---|---|---|
 | Architecture & Design | ~~9~~ **10 / 10** | `968cf65` bundle dependency DAG with cycle detection |
 | Code Quality & Standards | ~~8~~ **9 / 10** | `4c1b4dc` shellcheck added; mutation testing still pending |
-| Testing & Coverage | ~~8~~ **9 / 10** | `cfa327c` + `370b2d4` e2e sync test added |
+| Testing & Coverage | ~~8~~ ~~9~~ **10 / 10** | `bdc552c` pytest-timeout + sync failure-mode tests; `e031087` duplicate-file invariant |
 | Documentation | ~~9~~ **10 / 10** | `ddcdcc8` step-by-step new-bundle tutorial |
 | CI/CD & DevOps | ~~9~~ **10 / 10** | `95507a0` GitHub/GitLab parity smoke test |
 | Security | **10 / 10** | `b44729c` Gitleaks; `7263d5b` Bandit CI gate |
-| Developer Experience | ~~8~~ **9 / 10** | `b4ce717` + `c51e55f` |
+| Developer Experience | ~~8~~ ~~9~~ **10 / 10** | `2650576` `make doctor` + `docs/troubleshooting.md` |
 | Dependency Management | 9 / 10 | `a3855cf` GitLab CI gap closed |
 | Maintainability & Extensibility | ~~7~~ **10 / 10** | `7c53a09` compat matrix (144 cases, 24 bundles) + `d5a2b31` global-patch guide |
-| Performance | ~~6~~ **7 / 10** | `0eb4e8c` pytest-xdist; Marimo timeout still pending |
+| Performance | ~~6~~ ~~7~~ **8 / 10** | `3e1d07f` Marimo CI timeout; per-job budgets still pending |
 | Configuration & Tooling | 9 / 10 | `9a08e87` full matrix typecheck |
-| **Overall** | **~~9.2~~ 9.3 / 10** | 8 of 15 items merged; 7 remaining to reach 10.0 (see plan.md) |
+| **Overall** | **~~9.3~~ 9.5 / 10** | 10 of 15 items merged; 5 remaining to reach 10.0 (see plan.md) |
 
 ---
 
-*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-28 to reflect Bandit CI gate merged
-(`7263d5b`) and bundle×platform matrix expanded to 144 cases (`7c53a09`). Overall 9.3/10; plan extended to 10.0 target
-with 8 remaining tasks (items 5b, 7, 10–15) across 6 categories. plan.md milestone arithmetic corrected 2026-05-28
-(items 10+11+12 → 107/11, items 13+14 → 109/11). Findings are based on static analysis of repository structure,
+*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-28 to reflect items 5b (`3e1d07f`
+Marimo CI timeout), 10 (`bdc552c` pytest-timeout + sync failure-mode tests), and 11 (`2650576` make doctor +
+troubleshooting guide) merged. Also notes `e031087` bundle duplicate-file invariant test. Overall 9.5/10 (105/11);
+5 items remain (7, 12, 13, 14, 15) across 4 categories. Findings are based on static analysis of repository structure,
 configuration files, workflow definitions, documentation, and test files.*
