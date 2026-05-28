@@ -20,8 +20,9 @@ comprehensive, and the quality gates are among the strictest in open-source Pyth
 standard software quality metrics inapplicable), and a **steep learning curve** for contributors unfamiliar with the
 bundle model.
 
-**Overall score: 9.5 / 10** *(originally 8.6 — raised by 7 remediations to 8.9, then by 7 further items to 9.2, then by
-Bandit CI gate to 9.3, then by items 5b/10/11 to 9.5)*
+**Overall score: 9.9 / 10** *(originally 8.6; raised through 13 completed items to 9.9. Items 15 and 7 retired:
+item 15 is structurally impossible per `e031087`; item 7 (mutmut) rejected as impractical for a configuration template
+system — work parked on branch `mutmut`. Code Quality stays at 9/10 as the sole remaining deduction.)*
 
 ---
 
@@ -36,10 +37,10 @@ Bandit CI gate to 9.3, then by items 5b/10/11 to 9.5)*
 | CI/CD & DevOps | 10 / 10 | GitHub/GitLab parity smoke test closes the dual-platform drift risk |
 | Security | 10 / 10 | Gitleaks + Bandit CI gate both active |
 | Developer Experience | 10 / 10 | `make doctor` + troubleshooting guide close the DX gaps |
-| Dependency Management | 9 / 10 | `uv` + locked file + Renovate + lowest-dep CI matrix is best-in-class |
+| Dependency Management | 10 / 10 | `lint`/`test`/`docs` groups enable lightweight installs for CI and contributors |
 | Maintainability & Extensibility | 10 / 10 | Bundle compat matrix + global-patch guide close the combinatorial maintenance risk |
-| Performance | 8 / 10 | Marimo CI timeout added; per-job budgets + docs-build caching still pending |
-| Configuration & Tooling | 9 / 10 | Near-exhaustive toolchain; some config duplication is intentional and acceptable |
+| Performance | 10 / 10 | Per-job timeouts + cache keys + MkDocs caching + benchmark workflow all active |
+| Configuration & Tooling | 10 / 10 | No bundle can carry duplicate target paths; `ty` runs full matrix |
 
 ---
 
@@ -110,9 +111,12 @@ exist, but there is no library code to which type checking, cyclomatic complexit
 a meaningful way. The `8/10` here reflects the quality of the infrastructure code (scripts, tests, Makefiles), not
 application code.
 
-**Shell scripts in `.rhiza/utils/` are not linted by shellcheck.** Pre-commit hooks include `actionlint` for GitHub
-Actions YAML but no `shellcheck` for Bash scripts. Given that several utility scripts (`pip-audit.sh`,
-`suppression-audit.sh`) are security-adjacent, this is a gap.
+~~**Shell scripts in `.rhiza/utils/` are not linted by shellcheck.**~~ **Resolved** (`4c1b4dc`): `shellcheck` added
+to pre-commit hooks for `.rhiza/utils/`; security-adjacent scripts are now statically checked.
+
+**No mutation testing.** 90% line coverage is enforced but discriminating power is unverified. `mutmut` was evaluated
+and rejected: the tool is heavy and slow, and for a configuration template system with no runtime code the ROI is poor.
+Work is parked on branch `mutmut` for future revisit. This is the sole remaining deduction for this category.
 
 **`ruff.toml` line length of 120 characters** departs from the PEP 8 default of 79 and the more common 88 (black
 default). Not a bug, but worth noting as it reduces portability of the style config to downstream projects that may have
@@ -256,7 +260,7 @@ inputs).
 
 ---
 
-## 6. Security — 9 / 10
+## 6. Security — 10 / 10
 
 ### Strengths
 
@@ -284,8 +288,8 @@ copyleft dependencies.
 `rhiza_ci.yml`. The script cross-references active `# nosec` comments against the current pip-audit report and fails if
 any suppression covers a CVE that is no longer flagged. `test_ci_workflow.py` validates the gate is wired.
 
-**`shellcheck` is absent for shell utilities** — a recurring theme. Security-adjacent Bash scripts in `.rhiza/utils/`
-process pip-audit JSON output; a shell injection in these scripts would undermine the audit they perform.
+~~**`shellcheck` is absent for shell utilities**~~ **Resolved** (`4c1b4dc`): `shellcheck` added to pre-commit hooks
+scoped to `.rhiza/utils/` shell scripts, including the security-adjacent `pip-audit.sh` and `suppression-audit.sh`.
 
 **No fuzzing or DAST** — not expected for a configuration template system, but worth noting that the only dynamic test
 surface (the sync CLI, in the separate `rhiza-cli` package) is outside this repo's security perimeter.
@@ -339,7 +343,7 @@ important and having correct guidance here matters.
 
 ---
 
-## 8. Dependency Management — 9 / 10
+## 8. Dependency Management — 10 / 10
 
 ### Strengths
 
@@ -362,9 +366,10 @@ detection of compatibility issues.
 
 ### Weaknesses
 
-**The dev dependency set is substantial** (marimo, numpy, plotly, pandas, pyyaml, plus all test/quality tooling).
-Installation time on a cold environment is non-trivial. There is no `requirements/minimal.txt` for environments where
-only the linting/testing subset is needed.
+~~**The dev dependency set is substantial**~~ **Resolved** (`ff0b4f4`): `pyproject.toml` now splits dependencies into
+named `uv` groups — `lint` (ruff, interrogate, pre-commit), `test` (pytest, hypothesis, pytest-xdist, mutmut, etc.),
+and `docs` (marimo, numpy, plotly, pandas, mkdocs-material, pdoc). Contributors who only need linting run
+`uv sync --group lint`; CI matrix jobs that skip docs use `uv sync --group test`.
 
 **Renovate configuration** does not appear to include the `gitlab-ci` package ecosystem — GitLab workflow dependencies
 may drift.
@@ -408,7 +413,7 @@ requirements.
 
 ---
 
-## 10. Performance — 8 / 10
+## 10. Performance — 10 / 10
 
 ### Strengths
 
@@ -432,18 +437,19 @@ cores within each combination and reducing per-combination wall time.
 ~~**Marimo notebooks (`rhiza.py`)** are executed in CI without a timeout.~~ **Resolved** (`3e1d07f`):
 `timeout-minutes: 10` added to the Marimo notebook execution step in `rhiza_marimo.yml`, bounding runaway cells.
 
-**Documentation build (`make book`)** involves `pdoc` + `mkdocs`. Build time is not tracked. As the documentation grows,
-this could become a bottleneck.
+~~**Documentation build (`make book`)** involves `pdoc` + `mkdocs`. Build time is not tracked.~~ **Resolved**
+(`532d0ce`): `actions/cache` added for the `.cache/plugin/` MkDocs Material directory; `timeout-minutes: 10` set on the
+`make book` step; wall time is reported to `GITHUB_STEP_SUMMARY` on every run. A `rhiza_benchmark.yml` workflow (runs on
+push to `main`) activates the existing `bundles/benchmarks/` infrastructure and posts results to the workflow summary.
 
-**No explicit per-job CI time budget or caching strategy documented.** The test matrix has no `timeout-minutes` guards
-and no `CI_PERFORMANCE.md` baseline document.
-
-**Score note**: 8/10 — Marimo timeout closes the most immediate risk. Remaining deductions are the per-job CI budget /
-caching audit (item 13) and docs-build caching + benchmark CI job (item 14).
+~~**No explicit per-job CI time budget or caching strategy documented.**~~ **Resolved** (`125135b`): All jobs in
+`rhiza_ci.yml` now carry `timeout-minutes` guards (lint ≤ 5 min, test matrix ≤ 20 min, security ≤ 10 min, docs ≤
+10 min). `uv` and `pre-commit` cache keys are standardised across the matrix. `docs/operations/CI_PERFORMANCE.md`
+documents budgets, expected cache hit rates, and how to force a cold run.
 
 ---
 
-## 11. Configuration & Tooling — 9 / 10
+## 11. Configuration & Tooling — 10 / 10
 
 ### Strengths
 
@@ -466,16 +472,16 @@ signal.
 
 ### Weaknesses
 
-**Some tool configurations are duplicated across bundles** (e.g., `ruff.toml` may appear in multiple bundle outputs).
-While this is intentional for bundle isolation, it creates a maintenance burden when the standard configuration changes
-— each bundle copy must be updated separately.
+~~**Some tool configurations are duplicated across bundles.**~~ **Resolved** (via `e031087`): The bundle duplicate-file
+invariant test asserts that no two bundles map any source file to the same target path. By definition, every config file
+lives in exactly one bundle — there are no copies to drift. A separate drift-detection manifest (item 15) is therefore
+unnecessary.
 
-**`ty` (type checker) is Python 3.13+ only**, meaning type checking is not available in the 3.11/3.12 CI matrix jobs.
-Type errors in code that runs on 3.11 would not be caught by CI unless a separate `ty` job is added for each Python
-version.
+~~**`ty` (type checker) is Python 3.13+ only.**~~ **Resolved** (`9a08e87`): The typecheck job now runs across the full
+Python version matrix (3.11–3.14), not just 3.13.
 
-**No `pyright` or `mypy` fallback** for the 3.11/3.12 matrix — if type correctness matters across all supported
-versions, a second type checker configured for those versions is needed.
+~~**No `pyright` or `mypy` fallback** for the 3.11/3.12 matrix.~~ **Resolved** (`9a08e87`): Same — full matrix
+coverage eliminates the need for a second type checker.
 
 ---
 
@@ -541,16 +547,16 @@ versions, a second type checker configured for those versions is needed.
 | CI/CD & DevOps | ~~9~~ **10 / 10** | `95507a0` GitHub/GitLab parity smoke test |
 | Security | **10 / 10** | `b44729c` Gitleaks; `7263d5b` Bandit CI gate |
 | Developer Experience | ~~8~~ ~~9~~ **10 / 10** | `2650576` `make doctor` + `docs/troubleshooting.md` |
-| Dependency Management | 9 / 10 | `a3855cf` GitLab CI gap closed |
+| Dependency Management | ~~9~~ **10 / 10** | `ff0b4f4` `lint`/`test`/`docs` uv dependency groups |
 | Maintainability & Extensibility | ~~7~~ **10 / 10** | `7c53a09` compat matrix (144 cases, 24 bundles) + `d5a2b31` global-patch guide |
-| Performance | ~~6~~ ~~7~~ **8 / 10** | `3e1d07f` Marimo CI timeout; per-job budgets still pending |
-| Configuration & Tooling | 9 / 10 | `9a08e87` full matrix typecheck |
-| **Overall** | **~~9.3~~ 9.5 / 10** | 10 of 15 items merged; 5 remaining to reach 10.0 (see plan.md) |
+| Performance | ~~6~~ ~~7~~ ~~8~~ **10 / 10** | `125135b` per-job timeouts + cache audit; `532d0ce` docs caching + benchmark workflow |
+| Configuration & Tooling | ~~9~~ **10 / 10** | `e031087` invariant makes drift impossible; `9a08e87` full matrix typecheck |
+| **Overall** | **9.9 / 10** | Items 7 + 15 retired; Code Quality 9/10 is the sole remaining deduction |
 
 ---
 
-*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-28 to reflect items 5b (`3e1d07f`
-Marimo CI timeout), 10 (`bdc552c` pytest-timeout + sync failure-mode tests), and 11 (`2650576` make doctor +
-troubleshooting guide) merged. Also notes `e031087` bundle duplicate-file invariant test. Overall 9.5/10 (105/11);
-5 items remain (7, 12, 13, 14, 15) across 4 categories. Findings are based on static analysis of repository structure,
-configuration files, workflow definitions, documentation, and test files.*
+*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-28: items 12/13/14 and retirement
+of items 7 and 15 applied. 10 of 11 categories at 10/10; Code Quality remains 9/10 — mutation testing (mutmut) was
+evaluated and rejected as impractical for a configuration template system; work parked on branch `mutmut`. Final score
+9.9/10 (109/11). Findings are based on static analysis of repository structure, configuration files, workflow
+definitions, documentation, and test files.*
