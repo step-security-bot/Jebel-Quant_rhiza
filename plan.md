@@ -185,8 +185,8 @@ All 15 items complete. Score progression:
 |---|---|---|
 | Current (8 items done) | **9.3** | 102 / 11 |
 | After items 5b + 7 | **9.5** | 104 / 11 ≈ 9.45 |
-| After items 10 + 11 + 12 | **9.7** | 106 / 11 ≈ 9.63 |
-| After items 13 + 14 (Performance 9→10) | **9.8** | 108 / 11 ≈ 9.81 |
+| After items 10 + 11 + 12 | **9.7** | 107 / 11 ≈ 9.73 |
+| After items 13 + 14 (Performance 8→10) | **9.9** | 109 / 11 ≈ 9.91 |
 | After item 15 | **10.0** | 110 / 11 = 10.00 |
 
 Final category targets:
