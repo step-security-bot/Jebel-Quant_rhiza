@@ -1,8 +1,8 @@
 # Plan: 9.3 → 10.0
 
-> **Goal**: Raise overall score from 9.3 to 10.0 (110 / 11 = perfect average across all categories).  
-> **Non-goal**: Skipping categories — every category must reach 10; no floor of 9 is acceptable.  
-> **Last updated**: 2026-05-28  
+> **Goal**: Raise overall score from 9.3 to 10.0 (110 / 11 = perfect average across all categories).
+> **Non-goal**: Skipping categories — every category must reach 10; no floor of 9 is acceptable.
+> **Last updated**: 2026-05-28
 > **Progress**: 8 / 15 items complete
 
 ---
@@ -45,8 +45,11 @@ Eight category-points needed across 6 categories. Performance carries the larges
 ## Pending items (ordered by effort)
 
 ### 5b. Marimo notebook CI timeout — 30 min ⏳ Pending · [#1108](https://github.com/Jebel-Quant/rhiza/issues/1108)
-**Fixes**: Performance 7→8  
-Add `timeout-minutes: 10` to the Marimo notebook execution step in `rhiza_marimo.yml`. A runaway cell (e.g., an infinite Hypothesis search or a slow data load) currently blocks the entire workflow indefinitely. Ten minutes is generous for any notebook that documents a template system; adjust downward once baseline is measured.
+
+**Fixes**: Performance 7→8
+Add `timeout-minutes: 10` to the Marimo notebook execution step in `rhiza_marimo.yml`. A runaway cell (e.g., an infinite
+Hypothesis search or a slow data load) currently blocks the entire workflow indefinitely. Ten minutes is generous for
+any notebook that documents a template system; adjust downward once baseline is measured.
 
 ```yaml
 # .github/workflows/rhiza_marimo.yml
@@ -58,8 +61,13 @@ Add `timeout-minutes: 10` to the Marimo notebook execution step in `rhiza_marimo
 ---
 
 ### 7. Add mutation testing with mutmut — 3 h ⏳ Pending · [#1109](https://github.com/Jebel-Quant/rhiza/issues/1109)
-**Fixes**: Code Quality 9→10  
-The suite has 90% line coverage but no verification that tests are discriminating — a test can pass even if the logic it covers is inverted. Add `mutmut` targeting `.rhiza/utils/` and `tests/` utility modules. Run via `make mutation-test` (separate from `make test` — mutation runs are slow). Add a CI job (`rhiza_mutation.yml`) triggered on `push` to `main` that runs `mutmut run` on a declared subset of files and fails if the mutation score drops below 80%. Document the target in `make help` output.
+
+**Fixes**: Code Quality 9→10
+The suite has 90% line coverage but no verification that tests are discriminating — a test can pass even if the logic it
+covers is inverted. Add `mutmut` targeting `.rhiza/utils/` and `tests/` utility modules. Run via `make mutation-test`
+(separate from `make test` — mutation runs are slow). Add a CI job (`rhiza_mutation.yml`) triggered on `push` to `main`
+that runs `mutmut run` on a declared subset of files and fails if the mutation score drops below 80%. Document the
+target in `make help` output.
 
 ```toml
 # pyproject.toml
@@ -71,37 +79,52 @@ tests_dir = "tests/"
 ---
 
 ### 10. Add pytest-timeout + sync failure-mode tests — 2 h ⏳ Pending · [#1110](https://github.com/Jebel-Quant/rhiza/issues/1110)
-**Fixes**: Testing & Coverage 9→10  
+
+**Fixes**: Testing & Coverage 9→10
 Two sub-items that together close the "test execution time not tracked" and "error-path coverage absent" weaknesses:
 
-(a) **Global test timeout**: add `pytest-timeout` to dev dependencies and set `timeout = 60` in `pytest.ini`. This makes every test subject to a 60-second budget — a test that hangs (e.g., a blocking network call in a test stub) fails fast rather than freezing the runner. Fails CI if any single test exceeds the budget without an explicit `@pytest.mark.timeout(N)` override.
+(a) **Global test timeout**: add `pytest-timeout` to dev dependencies and set `timeout = 60` in `pytest.ini`. This makes
+every test subject to a 60-second budget — a test that hangs (e.g., a blocking network call in a test stub) fails fast
+rather than freezing the runner. Fails CI if any single test exceeds the budget without an explicit
+`@pytest.mark.timeout(N)` override.
 
-(b) **Sync failure-mode tests**: extend `tests/sync/test_sync_downstream.py` with three negative-path cases: (i) upstream bundle has invalid YAML → assert sync exits non-zero with a message containing the filename; (ii) a declared dependency bundle is absent from the profile → assert the error names the missing bundle; (iii) downstream target directory is read-only → assert sync rolls back cleanly (no partial writes). These verify that `cfa327c`'s error-propagation fix is correct under the full failure taxonomy.
+(b) **Sync failure-mode tests**: extend `tests/sync/test_sync_downstream.py` with three negative-path cases: (i)
+upstream bundle has invalid YAML → assert sync exits non-zero with a message containing the filename; (ii) a declared
+dependency bundle is absent from the profile → assert the error names the missing bundle; (iii) downstream target
+directory is read-only → assert sync rolls back cleanly (no partial writes). These verify that `cfa327c`'s
+error-propagation fix is correct under the full failure taxonomy.
 
 ---
 
 ### 11. Add `make doctor` target + troubleshooting guide — 2 h ⏳ Pending · [#1111](https://github.com/Jebel-Quant/rhiza/issues/1111)
-**Fixes**: Developer Experience 9→10  
+
+**Fixes**: Developer Experience 9→10
 Two sub-items that close the "uv friction on locked-down machines" and "sync error messages undocumented" weaknesses:
 
-(a) **`make doctor`**: a new Makefile target (in `make.d/doctor.mk`) that checks each prerequisite with a version floor and prints a colour-coded pass/fail table:
+(a) **`make doctor`**: a new Makefile target (in `make.d/doctor.mk`) that checks each prerequisite with a version floor
+and prints a colour-coded pass/fail table:
 
-```
+```text
 [✅] uv        0.5.3   ≥ 0.4.0
 [✅] python    3.12.2  ≥ 3.11.0
 [✅] make      4.4.1   ≥ 4.3.0   (GNU required)
 [❌] git       missing — install: https://git-scm.com
 ```
 
-Exits non-zero if any check fails. Registered in `make help` under the `Dev` group. Linked from `CONTRIBUTING.md` as the first troubleshooting step.
+Exits non-zero if any check fails. Registered in `make help` under the `Dev` group. Linked from `CONTRIBUTING.md` as the
+first troubleshooting step.
 
-(b) **`docs/troubleshooting.md`**: documents the three most common sync failure modes — "bundle not found," "file conflict between bundles," "sync leaves partial state" — with the exact error message pattern, root cause, and recovery command. Linked from `README.md` and `EXTENDING_RHIZA.md`.
+(b) **`docs/troubleshooting.md`**: documents the three most common sync failure modes — "bundle not found," "file
+conflict between bundles," "sync leaves partial state" — with the exact error message pattern, root cause, and recovery
+command. Linked from `README.md` and `EXTENDING_RHIZA.md`.
 
 ---
 
 ### 12. Add `uv` optional dependency groups — 1 h ⏳ Pending · [#1112](https://github.com/Jebel-Quant/rhiza/issues/1112)
-**Fixes**: Dependency Management 9→10  
-The dev dependency set pulls in Marimo, NumPy, Pandas, and Plotly even for contributors who only need to run linting or tests. Restructure `pyproject.toml` into named `uv` dependency groups:
+
+**Fixes**: Dependency Management 9→10
+The dev dependency set pulls in Marimo, NumPy, Pandas, and Plotly even for contributors who only need to run linting or
+tests. Restructure `pyproject.toml` into named `uv` dependency groups:
 
 ```toml
 [dependency-groups]
@@ -112,25 +135,39 @@ docs   = ["marimo>=0.7", "mkdocs-material>=9", "pdoc>=14",
           "numpy>=1.26", "pandas>=2", "plotly>=5"]
 ```
 
-Contributors who only want to run the linting suite: `uv sync --group lint`. CI matrix jobs that don't need documentation: `uv sync --group test`. Document the groups in `CONTRIBUTING.md` and update the DevContainer setup script. Maintains a top-level `uv sync` (all groups) for full development.
+Contributors who only want to run the linting suite: `uv sync --group lint`. CI matrix jobs that don't need
+documentation: `uv sync --group test`. Document the groups in `CONTRIBUTING.md` and update the DevContainer setup
+script. Maintains a top-level `uv sync` (all groups) for full development.
 
 ---
 
 ### 13. Add per-job `timeout-minutes` + CI caching audit — 2 h ⏳ Pending · [#1113](https://github.com/Jebel-Quant/rhiza/issues/1113)
-**Fixes**: Performance 8→9  
-After item 5b closes the Marimo gap (7→8), the remaining Performance deduction is "no explicit CI time budget or caching strategy." Two sub-items:
 
-(a) **Per-job timeouts**: audit every job in `.github/workflows/rhiza_ci.yml` and `.gitlab-ci.yml` and add `timeout-minutes` (GitHub) / `timeout` (GitLab) values grounded in measured baseline. Proposed budgets: lint/format job ≤ 5 min, test matrix job ≤ 20 min, security scan job ≤ 10 min, docs build job ≤ 10 min. Add a comment in each workflow documenting the budget and the date it was last measured.
+**Fixes**: Performance 8→9
+After item 5b closes the Marimo gap (7→8), the remaining Performance deduction is "no explicit CI time budget or caching
+strategy." Two sub-items:
 
-(b) **Caching audit**: verify that all 12 test matrix jobs share a common `uv` cache key (`${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}`) and a `pre-commit` cache key (`${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}`). Add a `docs/operations/CI_PERFORMANCE.md` documenting expected cache hit rates, cache TTL, and how to force a cold run for debugging.
+(a) **Per-job timeouts**: audit every job in `.github/workflows/rhiza_ci.yml` and `.gitlab-ci.yml` and add
+`timeout-minutes` (GitHub) / `timeout` (GitLab) values grounded in measured baseline. Proposed budgets: lint/format job
+≤ 5 min, test matrix job ≤ 20 min, security scan job ≤ 10 min, docs build job ≤ 10 min. Add a comment in each workflow
+documenting the budget and the date it was last measured.
+
+(b) **Caching audit**: verify that all 12 test matrix jobs share a common `uv` cache key (`${{ runner.os }}-uv-${{
+hashFiles('uv.lock') }}`) and a `pre-commit` cache key (`${{ runner.os }}-pre-commit-${{
+hashFiles('.pre-commit-config.yaml') }}`). Add a `docs/operations/CI_PERFORMANCE.md` documenting expected cache hit
+rates, cache TTL, and how to force a cold run for debugging.
 
 ---
 
 ### 14. Docs build caching + benchmark CI job — 3 h ⏳ Pending · [#1115](https://github.com/Jebel-Quant/rhiza/issues/1115)
-**Fixes**: Performance 9→10  
-After item 13 closes the time-budget gap (8→9), the remaining deductions are "documentation build time not tracked" and "benchmark infrastructure exists but is not active in CI." Two sub-items:
 
-(a) **MkDocs build caching**: add `actions/cache` for the `.cache/plugin/` directory used by MkDocs Material. Set `timeout-minutes: 10` on the `make book` CI step and add a build-time annotation using `GITHUB_STEP_SUMMARY` that reports wall time:
+**Fixes**: Performance 9→10
+After item 13 closes the time-budget gap (8→9), the remaining deductions are "documentation build time not tracked" and
+"benchmark infrastructure exists but is not active in CI." Two sub-items:
+
+(a) **MkDocs build caching**: add `actions/cache` for the `.cache/plugin/` directory used by MkDocs Material. Set
+`timeout-minutes: 10` on the `make book` CI step and add a build-time annotation using `GITHUB_STEP_SUMMARY` that
+reports wall time:
 
 ```yaml
 - name: Build docs
@@ -141,15 +178,21 @@ After item 13 closes the time-budget gap (8→9), the remaining deductions are "
     echo "Docs build: $(($(date +%s) - START))s" >> $GITHUB_STEP_SUMMARY
 ```
 
-(b) **Benchmark CI job**: add a `rhiza_benchmark.yml` workflow (triggered on `push` to `main`, not on every PR) that runs `make benchmark` and posts results to the workflow summary. This activates the existing `bundles/benchmarks/` infrastructure and creates a measurable CI performance baseline over time.
+(b) **Benchmark CI job**: add a `rhiza_benchmark.yml` workflow (triggered on `push` to `main`, not on every PR) that
+runs `make benchmark` and posts results to the workflow summary. This activates the existing `bundles/benchmarks/`
+infrastructure and creates a measurable CI performance baseline over time.
 
 ---
 
 ### 15. Bundle config drift detection test — 2 h ⏳ Pending · [#1116](https://github.com/Jebel-Quant/rhiza/issues/1116)
-**Fixes**: Configuration & Tooling 9→10  
-The remaining Configuration & Tooling deduction is config duplication across bundles. Bundle isolation requires each bundle to own its files, but when a canonical config (e.g., `ruff.toml`) appears in multiple bundles, all copies must stay in sync. Currently this is enforced only by the `GLOBAL_PATCH.md` workflow — a human process.
 
-Add a machine-enforced gate: a YAML manifest `bundle-config-manifest.yml` at the repo root listing files that must be byte-identical across all bundles that carry them:
+**Fixes**: Configuration & Tooling 9→10
+The remaining Configuration & Tooling deduction is config duplication across bundles. Bundle isolation requires each
+bundle to own its files, but when a canonical config (e.g., `ruff.toml`) appears in multiple bundles, all copies must
+stay in sync. Currently this is enforced only by the `GLOBAL_PATCH.md` workflow — a human process.
+
+Add a machine-enforced gate: a YAML manifest `bundle-config-manifest.yml` at the repo root listing files that must be
+byte-identical across all bundles that carry them:
 
 ```yaml
 # bundle-config-manifest.yml
@@ -161,7 +204,9 @@ shared_configs:
       - bundles/github-tests/.rhiza/
 ```
 
-A pytest test (`tests/bundles/test_config_drift.py`) reads this manifest and fails if any copy's SHA-256 diverges from the canonical. The test message names the file and the diverging bundle. Register in `make validate`. Intentional divergences are opt-out via a `diverges: true` flag in the manifest entry.
+A pytest test (`tests/bundles/test_config_drift.py`) reads this manifest and fails if any copy's SHA-256 diverges from
+the canonical. The test message names the file and the diverging bundle. Register in `make validate`. Intentional
+divergences are opt-out via a `diverges: true` flag in the manifest entry.
 
 ---
 
