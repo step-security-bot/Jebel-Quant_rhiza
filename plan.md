@@ -1,9 +1,9 @@
-# Plan: 8.9 → 9.5
+# Plan: 9.3 → 10.0
 
-> **Goal**: Raise overall score from 8.9 to 9.5.  
-> **Non-goal**: Perfect scores in every category — Performance stays capped below 10 by design.  
-> **Last updated**: 2026-05-27  
-> **Progress**: 7 / 9 items complete
+> **Goal**: Raise overall score from 9.3 to 10.0 (110 / 11 = perfect average across all categories).  
+> **Non-goal**: Skipping categories — every category must reach 10; no floor of 9 is acceptable.  
+> **Last updated**: 2026-05-28  
+> **Progress**: 8 / 15 items complete
 
 ---
 
@@ -11,81 +11,157 @@
 
 | Category | Now | Target | Delta | Status |
 |---|---|---|---|---|
-| Performance | ~~6~~ **7** | 8 | +1 remaining | Item 5a ✅ `0eb4e8c`; item 5b pending |
-| Maintainability & Extensibility | ~~8~~ **10** | 10 | — | Items 3+4 ✅ `c5d96df` + `d5a2b31` |
-| Security | 9 | 10 | +1 remaining | Item 2 ✅ `b44729c`; item 1 pending |
-| Documentation | ~~9~~ **10** | 10 | — | Item 9 ✅ `ddcdcc8` |
-| Architecture & Design | ~~9~~ **10** | 10 | — | Item 6 ✅ `968cf65` |
-| CI/CD & DevOps | ~~9~~ **10** | 10 | — | Item 8 ✅ `95507a0` |
-| Code Quality & Standards | 9 | 10 | +1 remaining | Item 7 pending |
-| All others | 9 | 9 | — | — |
+| Architecture & Design | **10** | 10 | — | ✅ `968cf65` |
+| Code Quality & Standards | 9 | 10 | +1 | Item 7 ⏳ pending |
+| Testing & Coverage | 9 | 10 | +1 | Item 10 ⏳ pending |
+| Documentation | **10** | 10 | — | ✅ `ddcdcc8` |
+| CI/CD & DevOps | **10** | 10 | — | ✅ `95507a0` |
+| Security | **10** | 10 | — | ✅ `7263d5b` + `b44729c` |
+| Developer Experience | 9 | 10 | +1 | Item 11 ⏳ pending |
+| Dependency Management | 9 | 10 | +1 | Item 12 ⏳ pending |
+| Maintainability & Extensibility | **10** | 10 | — | ✅ `7c53a09` + `d5a2b31` |
+| Performance | 7 | 10 | +3 | Items 5b, 13, 14 ⏳ pending |
+| Configuration & Tooling | 9 | 10 | +1 | Item 15 ⏳ pending |
 
-Seven category-points needed. Performance and Maintainability carry the largest individual gaps.
-
----
-
-## Items (ordered by effort)
-
-### 1. Automate Bandit suppression review in CI — 1 h ⏳ Pending
-**Fixes**: Security 9→10  
-Currently `suppression-audit.sh` exists but the suppressions themselves are never validated in CI — a suppression added for a now-fixed CVE lingers indefinitely. Add a CI step that cross-references active `# nosec` comments against the current `pip-audit` report and fails if any suppression covers a CVE that is no longer flagged (i.e., the code was fixed but the suppression was not removed). The existing `suppression-audit.sh` already parses this data; the job is to make it a blocking CI gate.
+Eight category-points needed across 6 categories. Performance carries the largest individual gap (+3).
 
 ---
 
-### 2. Add Gitleaks for deep historical secret scanning — 1 h ✅ `b44729c`
-**Fixes**: Security 9→10 (complements item 1)  
-GitHub's built-in secret scanning only covers pushed commits going forward. Add a Gitleaks GitHub Actions step (or pre-commit hook) to scan the full history and active working tree for credential patterns. Gitleaks provides a `.gitleaks.toml` for custom rules and false-positive suppression. This closes the gap called out in the analysis without replacing GitHub's native scanner.
+## Completed items (8 / 15)
+
+| Item | Commit | Category impact |
+|---|---|---|
+| 1 Bandit CI gate | `7263d5b` | Security 9→10 |
+| 2 Gitleaks | `b44729c` | Security (partial) |
+| 3 Bundle compat matrix | `7c53a09` | Maintainability 8→10 |
+| 4 Global patch docs | `d5a2b31` | Maintainability 8→10 |
+| 5a pytest-xdist | `0eb4e8c` | Performance 6→7 |
+| 6 DAG validation | `968cf65` | Architecture 9→10 |
+| 8 CI parity test | `95507a0` | CI/CD 9→10 |
+| 9 New bundle tutorial | `ddcdcc8` | Documentation 9→10 |
+
+---
+
+## Pending items (ordered by effort)
+
+### 5b. Marimo notebook CI timeout — 30 min ⏳ Pending · [#1108](https://github.com/Jebel-Quant/rhiza/issues/1108)
+**Fixes**: Performance 7→8  
+Add `timeout-minutes: 10` to the Marimo notebook execution step in `rhiza_marimo.yml`. A runaway cell (e.g., an infinite Hypothesis search or a slow data load) currently blocks the entire workflow indefinitely. Ten minutes is generous for any notebook that documents a template system; adjust downward once baseline is measured.
 
 ```yaml
-# .github/workflows/rhiza_ci.yml — security job
-- uses: gitleaks/gitleaks-action@v2
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+# .github/workflows/rhiza_marimo.yml
+- name: Run Marimo notebooks
+  timeout-minutes: 10
+  run: uv run marimo run docs/notebooks/rhiza.py
 ```
 
 ---
 
-### 3. Bundle compatibility matrix test — 4 h ✅ `c5d96df`
-**Fixes**: Maintainability 8→10 (primary gap)  
-Add a parameterised pytest test in `tests/bundles/` that iterates over all 46 bundle×platform combinations (23 bundles × GitHub + GitLab) and asserts: (a) no YAML parse errors, (b) no file owned by two bundles in the same profile, (c) all bundle dependencies are present. This replaces the implicit assumption that combinations are valid with an explicit regression test. Use `itertools.combinations` over `template-bundles.yml` to generate the matrix — no manual enumeration.
-
----
-
-### 4. Document "global patch" propagation pattern — 2 h ✅ `d5a2b31`
-**Fixes**: Maintainability 8→10 (complements item 3)  
-The single largest maintainability risk is that propagating a change to all bundles (e.g., adopting a new tool) requires editing 23 files with no atomic workflow. Add a `docs/operations/GLOBAL_PATCH.md` describing the pattern: (1) edit the relevant files in each bundle, (2) run `make validate` to catch inconsistencies, (3) use the new `--all-bundles` flag (or a helper script) to diff affected files across bundles. Optionally add a `make diff-bundles VAR=filename` target that shows the same file across all bundles side-by-side.
-
----
-
-### 5. Add pytest-xdist and Marimo notebook timeout — 2 h ⏳ Partial
-**Fixes**: Performance 6→8  
-Two independent sub-items:  
-(a) ✅ `0eb4e8c` — Add `pytest-xdist` to dev dependencies and `-n auto` to `pytest.ini` (or a `pytest -n auto` invocation in `make test`). This parallelises test execution across available CPU cores on each CI runner, directly reducing wall time for the 12-combination matrix.  
-(b) ⏳ Pending — Add a `timeout-minutes: 10` on the Marimo notebook execution step in `rhiza_marimo.yml` so a runaway computation cannot block the workflow indefinitely.
-
----
-
-### 6. Formalise bundle dependency DAG with cycle detection — 3 h ✅ `968cf65`
-**Fixes**: Architecture 9→10  
-`template-bundles.yml` encodes dependencies but they are only consumed at runtime by the rhiza CLI. Add a validation test (or a `make validate` sub-check) that: (a) parses the dependency graph from `template-bundles.yml`, (b) runs cycle detection (topological sort), and (c) fails loudly if a bundle is used without its declared prerequisite in a given profile. This moves bundle correctness from a runtime concern to a pre-commit / CI gate. A simple `graphlib.TopologicalSorter` (stdlib, Python 3.9+) handles this in ~20 lines.
-
----
-
-### 7. Add mutation testing with mutmut — 3 h ⏳ Pending
+### 7. Add mutation testing with mutmut — 3 h ⏳ Pending · [#1109](https://github.com/Jebel-Quant/rhiza/issues/1109)
 **Fixes**: Code Quality 9→10  
-The current suite has 90% line coverage but no verification that the tests are discriminating. Add `mutmut` (or `cosmic-ray`) targeting `tests/` utility functions and the bundle sync logic. Run it in a separate `make mutation-test` target (not in the default `make test` — too slow). Add a CI job that runs `mutmut run` on a subset of files and fails if the mutation score drops below a threshold (e.g., 80%). Document the target in `Makefile` help output. This directly closes the "no mutation testing" weakness in the analysis and is the highest-signal remaining Code Quality improvement.
+The suite has 90% line coverage but no verification that tests are discriminating — a test can pass even if the logic it covers is inverted. Add `mutmut` targeting `.rhiza/utils/` and `tests/` utility modules. Run via `make mutation-test` (separate from `make test` — mutation runs are slow). Add a CI job (`rhiza_mutation.yml`) triggered on `push` to `main` that runs `mutmut run` on a declared subset of files and fails if the mutation score drops below 80%. Document the target in `make help` output.
+
+```toml
+# pyproject.toml
+[tool.mutmut]
+paths_to_mutate = [".rhiza/utils/", "tests/"]
+tests_dir = "tests/"
+```
 
 ---
 
-### 8. CI/CD: GitLab/GitHub parity smoke test — 2 h ✅ `95507a0`
-**Fixes**: CI/CD 9→10  
-The analysis flags that GitHub Actions and GitLab CI parity requires manual synchronisation. Add a test (or `make validate` sub-check) that parses both `.github/workflows/rhiza_ci.yml` and `.gitlab-ci.yml` and asserts that: (a) the same job names exist in both, (b) the same Python version matrix is referenced, (c) both have equivalent test/lint/security steps. This does not run both CI systems end-to-end — it statically validates that the structural invariants hold, catching drift before it causes a silent breakage.
+### 10. Add pytest-timeout + sync failure-mode tests — 2 h ⏳ Pending · [#1110](https://github.com/Jebel-Quant/rhiza/issues/1110)
+**Fixes**: Testing & Coverage 9→10  
+Two sub-items that together close the "test execution time not tracked" and "error-path coverage absent" weaknesses:
+
+(a) **Global test timeout**: add `pytest-timeout` to dev dependencies and set `timeout = 60` in `pytest.ini`. This makes every test subject to a 60-second budget — a test that hangs (e.g., a blocking network call in a test stub) fails fast rather than freezing the runner. Fails CI if any single test exceeds the budget without an explicit `@pytest.mark.timeout(N)` override.
+
+(b) **Sync failure-mode tests**: extend `tests/sync/test_sync_downstream.py` with three negative-path cases: (i) upstream bundle has invalid YAML → assert sync exits non-zero with a message containing the filename; (ii) a declared dependency bundle is absent from the profile → assert the error names the missing bundle; (iii) downstream target directory is read-only → assert sync rolls back cleanly (no partial writes). These verify that `cfa327c`'s error-propagation fix is correct under the full failure taxonomy.
 
 ---
 
-### 9. Step-by-step "add a new bundle" tutorial — 2 h ✅ `ddcdcc8`
-**Fixes**: Documentation 9→10  
-`EXTENDING_RHIZA.md` describes the extension mechanism conceptually but lacks a worked example. Add a numbered walkthrough: (1) create the bundle directory, (2) add files, (3) declare dependencies in `template-bundles.yml`, (4) add bundle content tests, (5) run `make validate`, (6) open a PR. Include one real example (e.g., a minimal `linter` bundle that adds a `.ruff.toml` override). This is the highest-friction onboarding gap remaining after the diagram and `make explain-bundles` additions.
+### 11. Add `make doctor` target + troubleshooting guide — 2 h ⏳ Pending · [#1111](https://github.com/Jebel-Quant/rhiza/issues/1111)
+**Fixes**: Developer Experience 9→10  
+Two sub-items that close the "uv friction on locked-down machines" and "sync error messages undocumented" weaknesses:
+
+(a) **`make doctor`**: a new Makefile target (in `make.d/doctor.mk`) that checks each prerequisite with a version floor and prints a colour-coded pass/fail table:
+
+```
+[✅] uv        0.5.3   ≥ 0.4.0
+[✅] python    3.12.2  ≥ 3.11.0
+[✅] make      4.4.1   ≥ 4.3.0   (GNU required)
+[❌] git       missing — install: https://git-scm.com
+```
+
+Exits non-zero if any check fails. Registered in `make help` under the `Dev` group. Linked from `CONTRIBUTING.md` as the first troubleshooting step.
+
+(b) **`docs/troubleshooting.md`**: documents the three most common sync failure modes — "bundle not found," "file conflict between bundles," "sync leaves partial state" — with the exact error message pattern, root cause, and recovery command. Linked from `README.md` and `EXTENDING_RHIZA.md`.
+
+---
+
+### 12. Add `uv` optional dependency groups — 1 h ⏳ Pending · [#1112](https://github.com/Jebel-Quant/rhiza/issues/1112)
+**Fixes**: Dependency Management 9→10  
+The dev dependency set pulls in Marimo, NumPy, Pandas, and Plotly even for contributors who only need to run linting or tests. Restructure `pyproject.toml` into named `uv` dependency groups:
+
+```toml
+[dependency-groups]
+lint   = ["ruff>=0.4", "interrogate>=1.7", "pre-commit>=3.7"]
+test   = ["pytest>=8", "pytest-cov>=5", "hypothesis>=6", "mutmut>=2",
+          "pytest-timeout>=2", "pytest-xdist>=3"]
+docs   = ["marimo>=0.7", "mkdocs-material>=9", "pdoc>=14",
+          "numpy>=1.26", "pandas>=2", "plotly>=5"]
+```
+
+Contributors who only want to run the linting suite: `uv sync --group lint`. CI matrix jobs that don't need documentation: `uv sync --group test`. Document the groups in `CONTRIBUTING.md` and update the DevContainer setup script. Maintains a top-level `uv sync` (all groups) for full development.
+
+---
+
+### 13. Add per-job `timeout-minutes` + CI caching audit — 2 h ⏳ Pending · [#1113](https://github.com/Jebel-Quant/rhiza/issues/1113)
+**Fixes**: Performance 8→9  
+After item 5b closes the Marimo gap (7→8), the remaining Performance deduction is "no explicit CI time budget or caching strategy." Two sub-items:
+
+(a) **Per-job timeouts**: audit every job in `.github/workflows/rhiza_ci.yml` and `.gitlab-ci.yml` and add `timeout-minutes` (GitHub) / `timeout` (GitLab) values grounded in measured baseline. Proposed budgets: lint/format job ≤ 5 min, test matrix job ≤ 20 min, security scan job ≤ 10 min, docs build job ≤ 10 min. Add a comment in each workflow documenting the budget and the date it was last measured.
+
+(b) **Caching audit**: verify that all 12 test matrix jobs share a common `uv` cache key (`${{ runner.os }}-uv-${{ hashFiles('uv.lock') }}`) and a `pre-commit` cache key (`${{ runner.os }}-pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}`). Add a `docs/operations/CI_PERFORMANCE.md` documenting expected cache hit rates, cache TTL, and how to force a cold run for debugging.
+
+---
+
+### 14. Docs build caching + benchmark CI job — 3 h ⏳ Pending · [#1115](https://github.com/Jebel-Quant/rhiza/issues/1115)
+**Fixes**: Performance 9→10  
+After item 13 closes the time-budget gap (8→9), the remaining deductions are "documentation build time not tracked" and "benchmark infrastructure exists but is not active in CI." Two sub-items:
+
+(a) **MkDocs build caching**: add `actions/cache` for the `.cache/plugin/` directory used by MkDocs Material. Set `timeout-minutes: 10` on the `make book` CI step and add a build-time annotation using `GITHUB_STEP_SUMMARY` that reports wall time:
+
+```yaml
+- name: Build docs
+  timeout-minutes: 10
+  run: |
+    START=$(date +%s)
+    make book
+    echo "Docs build: $(($(date +%s) - START))s" >> $GITHUB_STEP_SUMMARY
+```
+
+(b) **Benchmark CI job**: add a `rhiza_benchmark.yml` workflow (triggered on `push` to `main`, not on every PR) that runs `make benchmark` and posts results to the workflow summary. This activates the existing `bundles/benchmarks/` infrastructure and creates a measurable CI performance baseline over time.
+
+---
+
+### 15. Bundle config drift detection test — 2 h ⏳ Pending · [#1116](https://github.com/Jebel-Quant/rhiza/issues/1116)
+**Fixes**: Configuration & Tooling 9→10  
+The remaining Configuration & Tooling deduction is config duplication across bundles. Bundle isolation requires each bundle to own its files, but when a canonical config (e.g., `ruff.toml`) appears in multiple bundles, all copies must stay in sync. Currently this is enforced only by the `GLOBAL_PATCH.md` workflow — a human process.
+
+Add a machine-enforced gate: a YAML manifest `bundle-config-manifest.yml` at the repo root listing files that must be byte-identical across all bundles that carry them:
+
+```yaml
+# bundle-config-manifest.yml
+shared_configs:
+  ruff.toml:
+    canonical: bundles/core/.rhiza/
+    copies:
+      - bundles/tests/.rhiza/
+      - bundles/github-tests/.rhiza/
+```
+
+A pytest test (`tests/bundles/test_config_drift.py`) reads this manifest and fails if any copy's SHA-256 diverges from the canonical. The test message names the file and the diverging bundle. Register in `make validate`. Intentional divergences are opt-out via a `diverges: true` flag in the manifest entry.
 
 ---
 
@@ -93,30 +169,39 @@ The analysis flags that GitHub Actions and GitLab CI parity requires manual sync
 
 | Item | Why skip |
 |---|---|
-| Performance 8→10 | No runtime code; CI parallelism already addresses the actionable gaps |
-| Plugin registry / bundle versioning | Architectural change; requires rhiza-cli coordination |
-| Stale Bandit suppression manual review | Covered by item 1 (automated) |
-| DAST / fuzzing | No dynamic attack surface in this repo |
-| `pyright`/`mypy` for 3.11/3.12 | `ty` already runs on full matrix per `9a08e87`; additional checker is redundant |
+| Plugin registry / bundle versioning | Architectural change requiring rhiza-cli coordination; scope is this repo only |
+| DAST / fuzzing | No dynamic attack surface — template system has no HTTP interface or user-controlled inputs |
+| `pyright`/`mypy` for 3.11/3.12 | `ty` runs across full matrix per `9a08e87`; a second type checker is redundant, not additive |
+| e2e GitHub Actions workflow testing | Requires a sandbox GitHub account and is operationally complex; static parity test (`95507a0`) covers structural drift |
+| macOS BSD Make guard | Documented in `333bada`; all CI uses GNU Make; adding a runtime guard to every Makefile target is noise |
 
 ---
 
 ## Expected result
 
-Seven items now complete. Remaining gaps:
+All 15 items complete. Score progression:
 
-| Done | Item | Category impact |
+| Milestone | Score | Formula |
 |---|---|---|
-| ✅ | 2 Gitleaks | Security partial |
-| ✅ | 3 Bundle compat matrix | Maintainability 8→10 |
-| ✅ | 4 Global patch docs | Maintainability 8→10 |
-| ✅ | 5a pytest-xdist | Performance 6→7 |
-| ✅ | 6 DAG validation | Architecture 9→10 |
-| ✅ | 8 CI parity test | CI/CD 9→10 |
-| ✅ | 9 New bundle tutorial | Documentation 9→10 |
-| ⏳ | 1 Bandit CI gate | Security 9→10 |
-| ⏳ | 5b Marimo timeout | Performance 7→8 |
-| ⏳ | 7 Mutation testing | Code Quality 9→10 |
+| Current (8 items done) | **9.3** | 102 / 11 |
+| After items 5b + 7 | **9.5** | 104 / 11 ≈ 9.45 |
+| After items 10 + 11 + 12 | **9.7** | 106 / 11 ≈ 9.63 |
+| After items 13 + 14 (Performance 9→10) | **9.8** | 108 / 11 ≈ 9.81 |
+| After item 15 | **10.0** | 110 / 11 = 10.00 |
 
-Current score: **(10+9+9+10+10+9+9+9+10+7+9)/11 = 101/11 ≈ 9.2**  
-Remaining 3 items deliver +3 points → 104/11 ≈ **9.45**, rounding to **9.5**.
+Final category targets:
+
+| Category | Score |
+|---|---|
+| Architecture & Design | 10 / 10 |
+| Code Quality & Standards | 10 / 10 |
+| Testing & Coverage | 10 / 10 |
+| Documentation | 10 / 10 |
+| CI/CD & DevOps | 10 / 10 |
+| Security | 10 / 10 |
+| Developer Experience | 10 / 10 |
+| Dependency Management | 10 / 10 |
+| Maintainability & Extensibility | 10 / 10 |
+| Performance | 10 / 10 |
+| Configuration & Tooling | 10 / 10 |
+| **Overall** | **10.0 / 10** |

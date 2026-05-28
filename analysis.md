@@ -13,7 +13,7 @@ Rhiza is a **living template system** for Python projects — a collection of 23
 
 The repository is exceptionally well-engineered for its purpose. Architecture decisions are documented, automation is comprehensive, and the quality gates are among the strictest in open-source Python tooling. The main risks are around **complexity overhang** (the cost of maintaining 23 bundles × 2 CI platforms), **lack of runtime code** (leaving some standard software quality metrics inapplicable), and a **steep learning curve** for contributors unfamiliar with the bundle model.
 
-**Overall score: 9.2 / 10** *(originally 8.6 — raised by 7 remediations to 8.9, then by 7 further items to 9.2)*
+**Overall score: 9.3 / 10** *(originally 8.6 — raised by 7 remediations to 8.9, then by 7 further items to 9.2, then by Bandit CI gate to 9.3)*
 
 ---
 
@@ -26,7 +26,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 | Testing & Coverage | 9 / 10 | Comprehensive; e2e sync test + bundle compat matrix added |
 | Documentation | 10 / 10 | Step-by-step new-bundle tutorial closes the last onboarding gap |
 | CI/CD & DevOps | 10 / 10 | GitHub/GitLab parity smoke test closes the dual-platform drift risk |
-| Security | 9 / 10 | Gitleaks adds deep history scanning; Bandit CI gate still pending |
+| Security | 10 / 10 | Gitleaks + Bandit CI gate both active |
 | Developer Experience | 9 / 10 | Rich tooling; bundle mental model now well-documented |
 | Dependency Management | 9 / 10 | `uv` + locked file + Renovate + lowest-dep CI matrix is best-in-class |
 | Maintainability & Extensibility | 10 / 10 | Bundle compat matrix + global-patch guide close the combinatorial maintenance risk |
@@ -190,7 +190,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 
 ### Weaknesses
 
-**Bandit suppression audit** (`suppression-audit.sh`) is present but the suppressions themselves are not reviewed in CI for validity — a suppression added for a fixed vulnerability may linger silently.
+~~**Bandit suppression audit**~~ **Resolved** (`7263d5b`): `suppression_audit.py` is now a blocking CI gate in `rhiza_ci.yml`. The script cross-references active `# nosec` comments against the current pip-audit report and fails if any suppression covers a CVE that is no longer flagged. `test_ci_workflow.py` validates the gate is wired.
 
 **`shellcheck` is absent for shell utilities** — a recurring theme. Security-adjacent Bash scripts in `.rhiza/utils/` process pip-audit JSON output; a shell injection in these scripts would undermine the audit they perform.
 
@@ -344,7 +344,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 2. ~~**No end-to-end sync test against a real downstream project**~~ **Resolved**: `cfa327c` + `370b2d4`.
 3. ~~**`shellcheck` gap on security-adjacent scripts**~~ **Resolved**: `4c1b4dc`.
 4. ~~**Bundle mental model onboarding**~~ **Resolved**: `b4ce717` (diagram) + `c51e55f` (`make explain-bundles`) + `ddcdcc8` (step-by-step tutorial).
-5. **Bandit suppression CI gate** — `suppression-audit.sh` runs but does not block CI on stale `# nosec` comments. Low effort remaining item.
+5. ~~**Bandit suppression CI gate**~~ **Resolved** (`7263d5b`): blocking CI gate added to `rhiza_ci.yml`.
 6. **No mutation testing** — line coverage is 90% but discriminating power is unverified. Medium effort.
 7. **Marimo notebook CI timeout** — a runaway notebook cell can block the workflow indefinitely. Low effort remaining item.
 
@@ -355,7 +355,7 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 | High | Add end-to-end test: provision a minimal downstream repo, run `rhiza sync`, verify output | Medium | ✅ `cfa327c` + `370b2d4` |
 | High | Add `shellcheck` to pre-commit hooks for `.rhiza/utils/` shell scripts | Low | ✅ `4c1b4dc` |
 | High | Add Gitleaks for deep historical secret scanning | Low | ✅ `b44729c` |
-| Medium | Add bundle compatibility matrix test confirming all 46 bundle×platform combos produce valid output | High | ✅ `c5d96df` |
+| Medium | Add bundle compatibility matrix test confirming all 46 bundle×platform combos produce valid output | High | ✅ `7c53a09` |
 | Medium | Formalise bundle dependency DAG with cycle detection | Medium | ✅ `968cf65` |
 | Medium | Document global-patch propagation pattern | Low | ✅ `d5a2b31` |
 | Medium | Add visual bundle dependency diagram to documentation | Low | ✅ `b4ce717` |
@@ -365,9 +365,15 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 | Medium | Add `pytest-xdist` to parallelise test matrix runs | Low | ✅ `0eb4e8c` |
 | Low | Configure `ty` (or `mypy`) for Python 3.11/3.12 CI matrix jobs | Low | ✅ `9a08e87` |
 | Low | Add Renovate config for GitLab CI ecosystem dependencies | Low | ✅ `a3855cf` |
-| Low | Automate Bandit suppression review as a blocking CI gate | Low | Not started |
+| Low | Automate Bandit suppression review as a blocking CI gate | Low | ✅ `7263d5b` |
 | Low | Add `timeout-minutes` to Marimo notebook CI step | Low | Not started |
 | Low | Add mutation testing with `mutmut` | Medium | Not started |
+| Low | Add `pytest-timeout` + sync failure-mode tests | Low | Not started |
+| Low | Add `make doctor` target + `docs/troubleshooting.md` | Low | Not started |
+| Low | Add `uv` optional dependency groups for lightweight installs | Low | Not started |
+| Low | Add per-job CI `timeout-minutes` + caching audit | Low | Not started |
+| Low | Add docs build caching + benchmark CI job | Medium | Not started |
+| Low | Add bundle config drift detection test | Low | Not started |
 
 ---
 
@@ -380,14 +386,14 @@ The repository is exceptionally well-engineered for its purpose. Architecture de
 | Testing & Coverage | ~~8~~ **9 / 10** | `cfa327c` + `370b2d4` e2e sync test added |
 | Documentation | ~~9~~ **10 / 10** | `ddcdcc8` step-by-step new-bundle tutorial |
 | CI/CD & DevOps | ~~9~~ **10 / 10** | `95507a0` GitHub/GitLab parity smoke test |
-| Security | 9 / 10 | `b44729c` Gitleaks added; Bandit CI gate still pending |
+| Security | **10 / 10** | `b44729c` Gitleaks; `7263d5b` Bandit CI gate |
 | Developer Experience | ~~8~~ **9 / 10** | `b4ce717` + `c51e55f` |
 | Dependency Management | 9 / 10 | `a3855cf` GitLab CI gap closed |
-| Maintainability & Extensibility | ~~7~~ **10 / 10** | `c5d96df` compat matrix + `d5a2b31` global-patch guide |
+| Maintainability & Extensibility | ~~7~~ **10 / 10** | `7c53a09` compat matrix (144 cases, 24 bundles) + `d5a2b31` global-patch guide |
 | Performance | ~~6~~ **7 / 10** | `0eb4e8c` pytest-xdist; Marimo timeout still pending |
 | Configuration & Tooling | 9 / 10 | `9a08e87` full matrix typecheck |
-| **Overall** | **~~8.6~~ 9.2 / 10** | 7 further items merged; 3 remaining to reach 9.5 |
+| **Overall** | **~~9.2~~ 9.3 / 10** | 8 of 15 items merged; 7 remaining to reach 10.0 (see plan.md) |
 
 ---
 
-*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-27 to reflect 7 further merged items from plan.md (overall 9.2/10; 3 items remain to reach 9.5). Findings are based on static analysis of repository structure, configuration files, workflow definitions, documentation, and test files.*
+*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-28 to reflect Bandit CI gate merged (`7263d5b`) and bundle×platform matrix expanded to 144 cases (`7c53a09`). Overall 9.3/10; plan extended to 10.0 target with 7 remaining items across 6 categories. Findings are based on static analysis of repository structure, configuration files, workflow definitions, documentation, and test files.*
