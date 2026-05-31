@@ -1,8 +1,8 @@
 # Plan: 9.5 → 10.0
 
 > **Goal**: Raise overall score from 9.5 to 10.0 (110 / 11 = perfect average across all categories).
-> **Last updated**: 2026-05-28
-> **Progress**: 13 / 13 actionable items complete (items 7 and 15 retired)
+> **Last updated**: 2026-05-31
+> **Progress**: 14 / 14 actionable items complete (item 15 retired). Item 7 resolved via `c1fb473`. **Score: 10.0 / 10.**
 
 ---
 
@@ -11,7 +11,7 @@
 | Category | Now | Target | Delta | Status |
 |---|---|---|---|---|
 | Architecture & Design | **10** | 10 | — | ✅ `968cf65` |
-| Code Quality & Standards | 9 | 10 | +1 | Item 7 retired — see branch `mutmut` |
+| Code Quality & Standards | **10** | 10 | — | ✅ `c1fb473` (`make mutation` + mutmut) |
 | Testing & Coverage | **10** | 10 | — | ✅ `bdc552c` |
 | Documentation | **10** | 10 | — | ✅ `ddcdcc8` |
 | CI/CD & DevOps | **10** | 10 | — | ✅ `95507a0` |
@@ -22,11 +22,11 @@
 | Performance | **10** | 10 | — | ✅ `125135b` + `532d0ce` |
 | Configuration & Tooling | **10** | 10 | — | ✅ `e031087` invariant (item 15 retired) |
 
-Code Quality sits at 9/10; item 7 retired to branch `mutmut` — no actionable items remain.
+All 11 categories at 10/10. **Final score: 10.0 / 10.**
 
 ---
 
-## Completed items (10 / 15)
+## Completed items (14 / 14)
 
 | Item | Commit | Category impact |
 |---|---|---|
@@ -37,6 +37,7 @@ Code Quality sits at 9/10; item 7 retired to branch `mutmut` — no actionable i
 | 5a pytest-xdist | `0eb4e8c` | Performance 6→7 |
 | 5b Marimo CI timeout | `3e1d07f` | Performance 7→8 |
 | 6 DAG validation | `968cf65` | Architecture 9→10 |
+| 7 Mutation testing (mutmut) | `c1fb473` | Code Quality 9→10 |
 | 8 CI parity test | `95507a0` | CI/CD 9→10 |
 | 9 New bundle tutorial | `ddcdcc8` | Documentation 9→10 |
 | 10 pytest-timeout + sync failure tests | `bdc552c` | Testing 9→10 |
@@ -57,15 +58,14 @@ Code Quality sits at 9/10; item 7 retired to branch `mutmut` — no actionable i
 | e2e GitHub Actions workflow testing | Requires a sandbox GitHub account and is operationally complex; static parity test (`95507a0`) covers structural drift |
 | macOS BSD Make guard | Documented in `333bada`; all CI uses GNU Make; adding a runtime guard to every Makefile target is noise |
 | Bundle config drift detection (item 15) | `e031087` invariant test already prevents any file from existing in two bundles — drift between copies is structurally impossible |
-| Mutation testing / mutmut (item 7) | Heavy, slow, poor track record in practice; 90% enforced line coverage on a configuration template system is sufficient signal; work parked on branch `mutmut` |
+| ~~Mutation testing / mutmut (item 7)~~ | Completed — `c1fb473` merged 2026-05-31 |
 
 ---
 
-## Expected result
+## Final result
 
-All 13 actionable items complete. Items 7 and 15 retired.
+All 14 actionable items complete. Item 15 retired.
 
-| Final state | Score | Formula |
+| State | Score | Formula |
 |---|---|---|
-| 10 categories at 10/10, Code Quality at 9/10 | **9.9** | 109 / 11 ≈ 9.91 |
-| If mutation testing ever revisited (branch `mutmut`) | **10.0** | 110 / 11 = 10.00 |
+| All 11 categories at 10/10 | **10.0** | 110 / 11 = 10.00 |

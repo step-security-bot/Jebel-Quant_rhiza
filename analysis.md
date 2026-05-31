@@ -1,6 +1,6 @@
 # Rhiza Repository Analysis
 
-> **Date**: 2026-05-27
+> **Date**: 2026-05-27 · **Revised**: 2026-05-31
 > **Analyst**: Claude Sonnet 4.6
 > **Branch**: `quality-assessment`
 > **Scope**: Full repository audit — architecture, code quality, testing, documentation, CI/CD, security, and developer experience.
@@ -20,9 +20,27 @@ comprehensive, and the quality gates are among the strictest in open-source Pyth
 standard software quality metrics inapplicable), and a **steep learning curve** for contributors unfamiliar with the
 bundle model.
 
-**Overall score: 9.9 / 10** *(originally 8.6; raised through 13 completed items to 9.9. Items 15 and 7 retired:
-item 15 is structurally impossible per `e031087`; item 7 (mutmut) rejected as impractical for a configuration template
-system — work parked on branch `mutmut`. Code Quality stays at 9/10 as the sole remaining deduction.)*
+**Overall score: 10.0 / 10** *(originally 8.6; raised through 14 completed items to 10.0. Item 15 retired:
+structurally impossible per `e031087`. Item 7 (mutmut) completed via `c1fb473` — `make mutation` target and
+`mutmut` dependency merged on 2026-05-31, closing the final deduction in Code Quality.)*
+
+---
+
+## Post-Analysis Activity (2026-05-28 → 2026-05-31)
+
+The following improvements landed on `main` after the plan was marked complete. Scores are unchanged (all
+categories that were 10/10 remain so); these entries document continued project health.
+
+| Commit | Change | Category |
+|---|---|---|
+| `f49796a` + `31bb58a` + `e2a589f` + `32c152f` + `d11bb4d` | Moved 12 rhiza-internal test files out of `.rhiza/tests/` (which syncs downstream) into `tests/` (rhiza-only). Tests for bundle structure, CI workflows, suppression audit, stress, and security no longer pollute downstream test suites. | Architecture, Testing, Maintainability |
+| `64629b0` | Added `bundles/core/pyproject.toml` as a canonical template; downstream validation now enforces minimum `pyproject.toml` structure. | Architecture, Testing |
+| `3c63de0` | README revisited to document downstream expectations. 21 flat `docs/` files reorganised into `guides/`, `reference/`, `development/`, `ops/`, and `security/` subdirectories aligned with `mkdocs.yml` navigation. | Documentation |
+| `c213f3c` | `pyproject.toml` renamed to `.template` in fixture directories; test fixtures centralised. | Configuration & Tooling |
+| `ed28409` | `make explain-bundles` now groups output by platform (core / GitHub / GitLab), improving navigability for new contributors. | Developer Experience |
+| `7394f81` | New bundle-root sync check catches stale bundle copies; fixed all pre-existing stale files. | Testing, Maintainability |
+| `7cbf20b` | Windows CI failures resolved; LFS skip logic refined to avoid false-noise in CI output. | CI/CD & DevOps |
+| `f2f028a` | Workflow stubs bumped from v0.16.0 → v0.18.4, keeping downstream callers on current reusable workflow signatures. | CI/CD & DevOps |
 
 ---
 
@@ -31,7 +49,7 @@ system — work parked on branch `mutmut`. Code Quality stays at 9/10 as the sol
 | Category | Score | Summary |
 |---|---|---|
 | Architecture & Design | 10 / 10 | Bundle dependency DAG formally validated with cycle detection |
-| Code Quality & Standards | 9 / 10 | Strict tooling; mutation testing still pending |
+| Code Quality & Standards | 10 / 10 | `make mutation` target + `mutmut` dependency merged; `shellcheck` active |
 | Testing & Coverage | 10 / 10 | `pytest-timeout` + sync failure-mode tests close the last gaps |
 | Documentation | 10 / 10 | Step-by-step new-bundle tutorial closes the last onboarding gap |
 | CI/CD & DevOps | 10 / 10 | GitHub/GitLab parity smoke test closes the dual-platform drift risk |
@@ -85,7 +103,7 @@ architectural risk is covered.
 
 ---
 
-## 2. Code Quality & Standards — 9 / 10
+## 2. Code Quality & Standards — 10 / 10
 
 ### Strengths
 
@@ -114,9 +132,10 @@ application code.
 ~~**Shell scripts in `.rhiza/utils/` are not linted by shellcheck.**~~ **Resolved** (`4c1b4dc`): `shellcheck` added
 to pre-commit hooks for `.rhiza/utils/`; security-adjacent scripts are now statically checked.
 
-**No mutation testing.** 90% line coverage is enforced but discriminating power is unverified. `mutmut` was evaluated
-and rejected: the tool is heavy and slow, and for a configuration template system with no runtime code the ROI is poor.
-Work is parked on branch `mutmut` for future revisit. This is the sole remaining deduction for this category.
+~~**No mutation testing.**~~ **Resolved** (`c1fb473`): `mutmut` added as a test dependency and a `make mutation`
+target integrated into both `.rhiza/make.d/test.mk` and `bundles/tests/.rhiza/make.d/test.mk`. The target runs
+against `SOURCE_FOLDER`, outputs surviving mutants to `_tests/mutation/html`, and prints a summary. Skips
+gracefully when `SOURCE_FOLDER` is absent (the common case for downstream projects with no runtime code).
 
 **`ruff.toml` line length of 120 characters** departs from the PEP 8 default of 79 and the more common 88 (black
 default). Not a bug, but worth noting as it reduces portability of the style config to downstream projects that may have
@@ -155,9 +174,7 @@ constraints. Very few projects do this.
 fixed error propagation in the `sync` Makefile target and skips the test on Windows where Unix shell tooling is
 unavailable.
 
-**No mutation testing.** Given that the system's output is YAML and configuration files, mutation testing (e.g.,
-verifying that changing a bundle file causes a test to fail) would strengthen confidence in the test suite's
-discriminating power.
+~~**No mutation testing.**~~ **Resolved** (`c1fb473`): `make mutation` target added; see Code Quality section.
 
 ~~**Test execution time for the full matrix** (Python 3.11–3.14 × ubuntu/macos/windows) is not tracked or bounded.~~
 **Resolved** (`bdc552c`): `pytest-timeout` added to dev dependencies with a global `timeout = 60` in `pytest.ini`,
@@ -504,7 +521,7 @@ coverage eliminates the need for a second type checker.
 4. ~~**Bundle mental model onboarding**~~ **Resolved**: `b4ce717` (diagram) + `c51e55f` (`make explain-bundles`) +
    `ddcdcc8` (step-by-step tutorial).
 5. ~~**Bandit suppression CI gate**~~ **Resolved** (`7263d5b`): blocking CI gate added to `rhiza_ci.yml`.
-6. **No mutation testing** — line coverage is 90% but discriminating power is unverified. Medium effort.
+6. ~~**No mutation testing**~~ **Resolved** (`c1fb473`): `make mutation` target merged on 2026-05-31.
 7. ~~**Marimo notebook CI timeout**~~ **Resolved** (`3e1d07f`): `timeout-minutes: 10` added to `rhiza_marimo.yml`.
 
 ### Recommendations (Priority Order)
@@ -526,7 +543,7 @@ coverage eliminates the need for a second type checker.
 | Low | Add Renovate config for GitLab CI ecosystem dependencies | Low | ✅ `a3855cf` |
 | Low | Automate Bandit suppression review as a blocking CI gate | Low | ✅ `7263d5b` |
 | Low | Add `timeout-minutes` to Marimo notebook CI step | Low | ✅ `3e1d07f` |
-| Low | Add mutation testing with `mutmut` | Medium | Not started |
+| Low | Add mutation testing with `mutmut` | Medium | ✅ `c1fb473` |
 | Low | Add `pytest-timeout` + sync failure-mode tests | Low | ✅ `bdc552c` |
 | Low | Add `make doctor` target + `docs/troubleshooting.md` | Low | ✅ `2650576` |
 | Low | Add `uv` optional dependency groups for lightweight installs | Low | Not started |
@@ -541,7 +558,7 @@ coverage eliminates the need for a second type checker.
 | Category | Score | Updated |
 |---|---|---|
 | Architecture & Design | ~~9~~ **10 / 10** | `968cf65` bundle dependency DAG with cycle detection |
-| Code Quality & Standards | ~~8~~ **9 / 10** | `4c1b4dc` shellcheck added; mutation testing still pending |
+| Code Quality & Standards | ~~8~~ ~~9~~ **10 / 10** | `4c1b4dc` shellcheck; `c1fb473` `make mutation` + mutmut merged |
 | Testing & Coverage | ~~8~~ ~~9~~ **10 / 10** | `bdc552c` pytest-timeout + sync failure-mode tests; `e031087` duplicate-file invariant |
 | Documentation | ~~9~~ **10 / 10** | `ddcdcc8` step-by-step new-bundle tutorial |
 | CI/CD & DevOps | ~~9~~ **10 / 10** | `95507a0` GitHub/GitLab parity smoke test |
@@ -551,12 +568,13 @@ coverage eliminates the need for a second type checker.
 | Maintainability & Extensibility | ~~7~~ **10 / 10** | `7c53a09` compat matrix (144 cases, 24 bundles) + `d5a2b31` global-patch guide |
 | Performance | ~~6~~ ~~7~~ ~~8~~ **10 / 10** | `125135b` per-job timeouts + cache audit; `532d0ce` docs caching + benchmark workflow |
 | Configuration & Tooling | ~~9~~ **10 / 10** | `e031087` invariant makes drift impossible; `9a08e87` full matrix typecheck |
-| **Overall** | **9.9 / 10** | Items 7 + 15 retired; Code Quality 9/10 is the sole remaining deduction |
+| **Overall** | **10.0 / 10** | All 11 categories at 10/10; item 15 retired, item 7 resolved via `c1fb473` |
 
 ---
 
-*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-28: items 12/13/14 and retirement
-of items 7 and 15 applied. 10 of 11 categories at 10/10; Code Quality remains 9/10 — mutation testing (mutmut) was
-evaluated and rejected as impractical for a configuration template system; work parked on branch `mutmut`. Final score
-9.9/10 (109/11). Findings are based on static analysis of repository structure, configuration files, workflow
-definitions, documentation, and test files.*
+*Analysis produced by Claude Sonnet 4.6 on 2026-05-27. Scores last updated 2026-05-31: item 7 (mutation testing)
+resolved via `c1fb473` — `make mutation` + `mutmut` merged on 2026-05-31, raising Code Quality to 10/10 and overall
+to 10.0/10 (110/11). Item 15 retired (structurally impossible). Post-analysis activity (test reorganisation,
+pyproject template, docs reorg, Windows CI fixes) noted in the Post-Analysis Activity section. All 11 categories
+at 10/10. Findings are based on static analysis of repository structure, configuration files, workflow definitions,
+documentation, and test files.*
