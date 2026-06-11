@@ -1,6 +1,6 @@
 # Rhiza Repository Analysis
 
-> **Date**: 2026-05-27 · **Revised**: 2026-05-31
+> **Date**: 2026-05-27 · **Revised**: 2026-06-11
 > **Analyst**: Claude Sonnet 4.6
 > **Branch**: `quality-assessment`
 > **Scope**: Full repository audit — architecture, code quality, testing, documentation, CI/CD, security, and developer experience.
@@ -33,18 +33,19 @@ An independent re-assessment (Claude Fable 5, 2026-06-11) scored the repository 
 for documentation accuracy: ~17 dead markdown links existed (including a `.github/CONFIG.md` pointer shipped to
 every downstream project that had never existed anywhere), CLAUDE.md claimed 13 bundles against 27 defined, and
 this document's own Gitleaks claim had silently regressed (see Security section). The systemic finding: the repo
-gates structural invariants superbly but had no gate for prose accuracy — so a six-item plan was executed, every
-fix landing with a test gate in the same PR:
+gates structural invariants superbly but had no gate for prose accuracy — so a six-item plan is being executed,
+every fix landing with a test gate in the same PR. As of 2026-06-11, four of six items are merged (Links, A, B, C);
+the doc-accuracy deduction itself is closed by #1147 + #1154. Items D, E, and F remain open:
 
 | Item | PR / Issue | Change | Gate |
 |---|---|---|---|
 | Links | #1147 (merged) | All dead links fixed; `bundles/github/.github/CONFIG.md` created | `tests/docs/test_doc_consistency.py`: every relative link must resolve in the repo or any bundle's downstream layout; every bundle documented in CLAUDE.md |
 | A — CI/CD | #1148 (merged) | Concurrency groups in all 26 workflows (release/sync queue); exact action pinning; fixed gh-aw bundle's broken local action path | `tests/api/test_workflow_hygiene.py` |
 | B — Security | #1149 (merged) | Gitleaks pre-commit hook (root + core bundle); `curl\|bash` installers replaced with npm; shellcheck widened to all `*.sh` | `TestPipedInstallers` in `tests/security/` (allowlist: astral.sh uv bootstrap only) |
-| C — Documentation | #1150 / #1154 | Prose gates: make-target mentions must exist, no hard-coded bundle counts, no "Last Updated" stamps; this document corrected | `TestProseDrift` in `tests/docs/` |
-| D — Developer Experience | #1151 | Shell-completion caching; Windows/WSL quick-start | per-PR |
-| E — Dependency Management | #1152 | ADR 0011: Renovate vs Dependabot division of labour | per-PR |
-| F — Code Quality & Maintainability | #1153 | Ruff exclusion rationale; duplicate make-target gate; new-bundle checklist | per-PR |
+| C — Documentation | #1150 → PR #1154 (merged) | Prose gates: make-target mentions must exist, no hard-coded bundle counts, no "Last Updated" stamps; this document corrected | `TestProseDrift` in `tests/docs/test_doc_consistency.py` |
+| D — Developer Experience | #1151 (open) | Shell-completion caching; Windows/WSL quick-start | per-PR |
+| E — Dependency Management | #1152 (open) | ADR 0011: Renovate vs Dependabot division of labour | per-PR |
+| F — Code Quality & Maintainability | #1153 (open) | Ruff exclusion rationale; duplicate make-target gate; new-bundle checklist | per-PR |
 
 ## Post-Analysis Activity (2026-05-28 → 2026-05-31)
 
