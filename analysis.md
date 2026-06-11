@@ -9,15 +9,16 @@
 
 ## Executive Summary
 
-Rhiza is a **living template system** for Python projects — a collection of 23 composable configuration bundles that
+Rhiza is a **living template system** for Python projects — a growing collection of composable configuration bundles
+(`.rhiza/template-bundles.yml` is the authoritative list; 23 at the time of the original analysis, 27 by June 2026) that
 downstream repositories can selectively adopt and continuously sync as the template evolves. It is not a runtime
 library. Its "product" is Makefile targets, CI/CD workflows, linting configs, testing scaffolding, and documentation
 infrastructure delivered as versioned, composable units.
 
 The repository is exceptionally well-engineered for its purpose. Architecture decisions are documented, automation is
 comprehensive, and the quality gates are among the strictest in open-source Python tooling. The main risks are around
-**complexity overhang** (the cost of maintaining 23 bundles × 2 CI platforms), **lack of runtime code** (leaving some
-standard software quality metrics inapplicable), and a **steep learning curve** for contributors unfamiliar with the
+**complexity overhang** (the cost of a growing bundle set × 2 CI platforms), **lack of runtime code** (leaving
+some standard software quality metrics inapplicable), and a **steep learning curve** for contributors unfamiliar with the
 bundle model.
 
 **Overall score: 10.0 / 10** *(originally 8.6; raised through 14 completed items to 10.0. Item 15 retired:
@@ -25,6 +26,25 @@ structurally impossible per `e031087`. Item 7 (mutmut) completed via `c1fb473` �
 `mutmut` dependency merged on 2026-05-31, closing the final deduction in Code Quality.)*
 
 ---
+
+## Post-Analysis Activity (2026-06-11): Independent Re-Assessment and the "10 Across the Board" Plan
+
+An independent re-assessment (Claude Fable 5, 2026-06-11) scored the repository **9 / 10**, deducting one point
+for documentation accuracy: ~17 dead markdown links existed (including a `.github/CONFIG.md` pointer shipped to
+every downstream project that had never existed anywhere), CLAUDE.md claimed 13 bundles against 27 defined, and
+this document's own Gitleaks claim had silently regressed (see Security section). The systemic finding: the repo
+gates structural invariants superbly but had no gate for prose accuracy — so a six-item plan was executed, every
+fix landing with a test gate in the same PR:
+
+| Item | PR / Issue | Change | Gate |
+|---|---|---|---|
+| Links | #1147 (merged) | All dead links fixed; `bundles/github/.github/CONFIG.md` created | `tests/docs/test_doc_consistency.py`: every relative link must resolve in the repo or any bundle's downstream layout; every bundle documented in CLAUDE.md |
+| A — CI/CD | #1148 (merged) | Concurrency groups in all 26 workflows (release/sync queue); exact action pinning; fixed gh-aw bundle's broken local action path | `tests/api/test_workflow_hygiene.py` |
+| B — Security | #1149 (merged) | Gitleaks pre-commit hook (root + core bundle); `curl\|bash` installers replaced with npm; shellcheck widened to all `*.sh` | `TestPipedInstallers` in `tests/security/` (allowlist: astral.sh uv bootstrap only) |
+| C — Documentation | #1150 / #1154 | Prose gates: make-target mentions must exist, no hard-coded bundle counts, no "Last Updated" stamps; this document corrected | `TestProseDrift` in `tests/docs/` |
+| D — Developer Experience | #1151 | Shell-completion caching; Windows/WSL quick-start | per-PR |
+| E — Dependency Management | #1152 | ADR 0011: Renovate vs Dependabot division of labour | per-PR |
+| F — Code Quality & Maintainability | #1153 | Ruff exclusion rationale; duplicate make-target gate; new-bundle checklist | per-PR |
 
 ## Post-Analysis Activity (2026-05-28 → 2026-05-31)
 
@@ -53,7 +73,7 @@ categories that were 10/10 remain so); these entries document continued project 
 | Testing & Coverage | 10 / 10 | `pytest-timeout` + sync failure-mode tests close the last gaps |
 | Documentation | 10 / 10 | Step-by-step new-bundle tutorial closes the last onboarding gap |
 | CI/CD & DevOps | 10 / 10 | GitHub/GitLab parity smoke test closes the dual-platform drift risk |
-| Security | 10 / 10 | Gitleaks + Bandit CI gate both active |
+| Security | 10 / 10 | Gitleaks (pre-commit, since #1149) + Bandit gate both active |
 | Developer Experience | 10 / 10 | `make doctor` + troubleshooting guide close the DX gaps |
 | Dependency Management | 10 / 10 | `lint`/`test`/`docs` groups enable lightweight installs for CI and contributors |
 | Maintainability & Extensibility | 10 / 10 | Bundle compat matrix + global-patch guide close the combinatorial maintenance risk |
@@ -311,8 +331,11 @@ scoped to `.rhiza/utils/` shell scripts, including the security-adjacent `pip-au
 **No fuzzing or DAST** — not expected for a configuration template system, but worth noting that the only dynamic test
 surface (the sync CLI, in the separate `rhiza-cli` package) is outside this repo's security perimeter.
 
-~~**Secret scanning is GitHub's built-in tool**~~ **Resolved** (`b44729c`): Gitleaks is now integrated as a GitHub
-Actions step with a `.gitleaks.toml` for custom rules and false-positive suppression. Full history scanning is in CI.
+~~**Secret scanning is GitHub's built-in tool**~~ **Resolved** (`b44729c`), **regressed**, **re-resolved** (#1149):
+the original Gitleaks GitHub Actions integration was reverted (`75f3335` — the gitleaks-action requires a
+`GITLEAKS_LICENSE` for organisations, see #1106), which silently left this claim stale. #1149 (June 2026) reintroduced
+Gitleaks as a licence-free pre-commit hook in the root config and the core bundle, so downstream projects get
+commit-time secret scanning as well.
 
 ---
 
@@ -562,7 +585,7 @@ coverage eliminates the need for a second type checker.
 | Testing & Coverage | ~~8~~ ~~9~~ **10 / 10** | `bdc552c` pytest-timeout + sync failure-mode tests; `e031087` duplicate-file invariant |
 | Documentation | ~~9~~ **10 / 10** | `ddcdcc8` step-by-step new-bundle tutorial |
 | CI/CD & DevOps | ~~9~~ **10 / 10** | `95507a0` GitHub/GitLab parity smoke test |
-| Security | **10 / 10** | `b44729c` Gitleaks; `7263d5b` Bandit CI gate |
+| Security | **10 / 10** | `b44729c` Gitleaks (reverted with `75f3335`, reinstated as pre-commit hook in #1149); `7263d5b` Bandit CI gate |
 | Developer Experience | ~~8~~ ~~9~~ **10 / 10** | `2650576` `make doctor` + `docs/troubleshooting.md` |
 | Dependency Management | ~~9~~ **10 / 10** | `ff0b4f4` `lint`/`test`/`docs` uv dependency groups |
 | Maintainability & Extensibility | ~~7~~ **10 / 10** | `7c53a09` compat matrix (144 cases, 24 bundles) + `d5a2b31` global-patch guide |
